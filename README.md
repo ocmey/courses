@@ -40,7 +40,7 @@ Mode « En magasin » > vérifie le magasin choisi > « Rayons », et mets les r
 ## À savoir
 - Supabase gratuit met le projet en pause après 7 jours sans aucune activité (vacances, par exemple). Il se réactive en un clic depuis le tableau de bord, les données restent.
 - La clé « anon » dans config.js peut être publique : chaque famille ne voit que ses propres données (testé).
-- Après une modification des fichiers, change `VERSION` dans `sw.js`, sinon les iPhone gardent l'ancienne version en cache.
+- Après une modification des fichiers, change `VERSION` dans `sw.js` et le `?v=` des fichiers dans `index.html`, sinon les iPhone peuvent mélanger ancienne et nouvelle version.
 
 ## Fichiers
 - `index.html`, `style.css`, `app.js` : l'app.
