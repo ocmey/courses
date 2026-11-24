@@ -189,11 +189,18 @@
     const k = S.known[term]; if (!k || !S.family) return;
     enqueue({ op: "upsert", table: "known_items", row: { ...k, family_id: S.family.id } });
   }
+  // « far fram » trouve « Farmer … Framboise » : chaque mot tapé commence un mot du libellé.
+  const prefixMatch = (label, q) => {
+    const ws = norm(label).split(/[^a-z0-9]+/).filter(Boolean);
+    let qs = norm(q).split(/[^a-z0-9]+/).filter(Boolean);
+    if (qs.length > 1) qs = qs.filter(x => x.length >= 3 || /\d/.test(x)); // ignore « de », « la »…
+    return qs.length > 0 && qs.every(x => ws.some(w => w.startsWith(x)));
+  };
   const onList = () => new Set(Object.values(S.items).filter(i => !i.done).map(i => norm(i.name)));
   function suggest(q) {
     const t = norm(q), taken = onList(), out = [], seen = new Set();
     const ok = term => !taken.has(term) && !seen.has(term);
-    const match = label => { const n = norm(label); return n.startsWith(t) || n.split(/[\s'-]+/).some(w => w.startsWith(t)); };
+    const match = label => norm(label).startsWith(t) || prefixMatch(label, t);
     const known = Object.values(S.known).sort((a, b) => b.uses - a.uses || (b.last_used > a.last_used ? 1 : -1));
     if (!t) { // champ vide : les habituels de la famille
       known.filter(k => ok(k.term)).slice(0, 8).forEach(k => { seen.add(k.term); out.push({ label: k.label, qty: k.qty, hist: true, image: k.image, migros_id: k.migros_id }); });
@@ -220,6 +227,24 @@
 
   // Produits migros.ch, via la fonction serveur. Si Migros ne répond pas, on fait sans.
   const migrosCache = {}; let migrosShown = [], migrosTimer = null, migrosOff = false;
+  // Produits Migros déjà vus sur ce téléphone, pour retrouver « far fram » sans dépendre du moteur Migros.
+  const POOL_KEY = "courses-migros-pool";
+  let migPool = (() => { try { return JSON.parse(localStorage.getItem(POOL_KEY)) || []; } catch (e) { return []; } })();
+  function addToPool(list) {
+    const ids = new Set(list.map(m => m.id));
+    migPool = list.filter(m => m.id && m.name).concat(migPool.filter(m => !ids.has(m.id))).slice(0, 400);
+    try { localStorage.setItem(POOL_KEY, JSON.stringify(migPool)); } catch (e) {}
+  }
+  async function searchMigros(q) {
+    const res = await fetchMigros(q);
+    const words = norm(q).split(/[^a-z0-9]+/).filter(w => w.length >= 3);
+    const extra = words.length > 1 ? await Promise.all(words.map(w => fetchMigros(w).catch(() => []))) : [];
+    const seen = new Set(), out = [];
+    const add = m => { const k = m.id || m.name; if (!seen.has(k)) { seen.add(k); out.push(m); } };
+    [res, ...extra, migPool].flat().filter(m => prefixMatch(`${m.brand || ""} ${m.name}`, q)).forEach(add);
+    if (words.length <= 1 || !out.length) res.forEach(add); // sinon on garde le classement Migros
+    return out;
+  }
   const migrosLabel = m => (m.brand && !norm(m.name).startsWith(norm(m.brand)) ? m.brand + " " : "") + m.name;
   async function fetchMigros(q) {
     const key = norm(q);
@@ -229,14 +254,15 @@
       headers: { apikey: cfg.supabaseAnonKey, Authorization: "Bearer " + (data.session ? data.session.access_token : cfg.supabaseAnonKey) } });
     const j = await r.json();
     if (j.error) console.warn("Migros :", j.error);
-    return (migrosCache[key] = j.products || []);
+    const list = j.products || []; addToPool(list);
+    return (migrosCache[key] = list);
   }
   function queueMigros(q) {
     clearTimeout(migrosTimer);
     if (!ONLINE || migrosOff || !navigator.onLine || norm(q).length < 3) return;
     migrosTimer = setTimeout(async () => {
       try {
-        const res = await fetchMigros(q);
+        const res = await searchMigros(q);
         if (parse($("new").value).name !== q) return; // l'utilisateur a continué à taper
         renderSugg(res);
       } catch (e) { console.warn(e); }
