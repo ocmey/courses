@@ -468,17 +468,36 @@
 
   // ---------- Fiche article ----------
   let editing = null, photoPick = null, photoList = [];
+  let photoState = null;
   function renderPhotos(i, list, failed) {
-    photoList = list.slice(0, 8);
+    photoState = { i, list, failed };
+    // la photo choisie (Migros ou prise avec le téléphone) toujours en premier
+    if (photoPick.image && !list.some(m => m.image === photoPick.image)) list = [{ id: photoPick.migros_id, image: photoPick.image }].concat(list);
+    photoList = list.slice(0, 9);
     $("it-photos").innerHTML = `<button type="button" class="none" data-p="-1" aria-pressed="${!photoPick.image}">Sans photo</button>` +
+      `<button type="button" class="none cam" data-cam="1" aria-label="Prendre ou choisir une photo">📷<br>Photo</button>` +
       photoList.map((m, k) => `<button type="button" data-p="${k}" aria-pressed="${photoPick.image === m.image}" title="${esc(m.name || "")}">${imgTag(m.image)}</button>`).join("") +
       (!ONLINE ? `<span class="muted">Photos Migros indisponibles en démo</span>` : failed ? `<span class="muted">Migros ne répond pas</span>` : !photoList.length ? `<span class="muted">Aucune photo trouvée</span>` : "");
   }
   $("it-photos").addEventListener("click", e => {
+    if (e.target.closest("button[data-cam]")) return $("it-file").click();
     const b = e.target.closest("button[data-p]"); if (!b) return;
     const k = +b.dataset.p, m = photoList[k];
     photoPick = k < 0 ? { image: null, migros_id: null } : { image: m.image, migros_id: m.id || null };
     $("it-photos").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  });
+  // Photo prise avec le téléphone : réduite à 240 px (environ 15 Ko) et gardée avec l'article.
+  $("it-file").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+    try {
+      const bmp = await new Promise((ok, ko) => { const im = new Image(); im.onload = () => ok(im); im.onerror = ko; im.src = URL.createObjectURL(f); });
+      const k = Math.min(1, 240 / Math.max(bmp.naturalWidth, bmp.naturalHeight));
+      const c = document.createElement("canvas"); c.width = Math.round(bmp.naturalWidth * k); c.height = Math.round(bmp.naturalHeight * k);
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(bmp.src);
+      photoPick = { image: c.toDataURL("image/jpeg", 0.75), migros_id: null };
+      if (photoState) renderPhotos(photoState.i, photoState.list, photoState.failed);
+    } catch (err) { toast("Photo illisible, réessaie"); }
   });
   function openItem(id) {
     const i = S.items[id]; if (!i) return; editing = id;
@@ -650,3 +669,6 @@
   window.__courses = { classify, parse, suggest };
   boot();
 })();
+
+// Pas de zoom au pincement (Safari ignore « user-scalable=no » depuis iOS 10).
+["gesturestart", "gesturechange"].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive: false }));

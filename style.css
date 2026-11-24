@@ -110,3 +110,6 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 #b-here.loc { display: inline-flex; align-items: center; justify-content: center; }
 #b-here.loc svg { display: block; }
 .small { font-size: .85em; margin: 0; padding-left: 1.1em; }
+/* Pas de zoom dans Safari : ni double-tap, ni pincement (voir aussi app.js) */
+html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+.photos button.cam { line-height: 1.2; }

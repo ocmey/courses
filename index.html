@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2f7a5b">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Courses">
@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 <div id="app">
@@ -79,6 +79,7 @@
     <label for="it-qty">Quantité</label><input id="it-qty" placeholder="ex. 2 l, 500 g, 3">
     <label for="it-cat">Rayon</label><select id="it-cat"></select>
     <label>Photo</label>
+    <input id="it-file" type="file" accept="image/*" hidden>
     <div id="it-photos" class="photos"><span class="muted">Recherche Migros…</span></div>
     <div class="row gap">
       <button type="button" id="it-del" class="danger">Supprimer</button>
@@ -114,9 +115,9 @@
 
 <div id="toast" class="toast" role="status"></div>
 
-<script src="config.js?v=18"></script>
-<script src="categories.js?v=18"></script>
+<script src="config.js?v=19"></script>
+<script src="categories.js?v=19"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="app.js?v=18"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>
