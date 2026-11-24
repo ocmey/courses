@@ -260,8 +260,8 @@
     const taken = new Set(list.map(s => norm(s.label)).concat([...onList()]));
     migrosShown = Array.isArray(migrosRes) ? migrosRes.filter(m => !taken.has(norm(migrosLabel(m)))).slice(0, 6) : [];
     $("sugg").innerHTML = (list.length && !q ? `<span class="lbl">Habituels</span>` : "") + list.map((s, k) =>
-      `<button type="button" class="${s.hist ? "hist" : ""}${s.image ? " mig" : ""}" data-l="${k}" data-s="${esc(s.label)}">${s.image ? `<img src="${esc(s.image)}" alt="" onerror="this.remove()">` : ""}${esc(s.label)}${s.qty && !typed.qty ? `<small>${esc(s.qty)}</small>` : ""}</button>`).join("")
-      + migrosShown.map((m, k) => `<button type="button" class="mig" data-m="${k}" data-s="${esc(migrosLabel(m))}">${m.image ? `<img src="${esc(m.image)}" alt="" onerror="this.remove()">` : ""}${esc(migrosLabel(m))}${m.size ? `<small>${esc(m.size)}</small>` : ""}</button>`).join("");
+      `<button type="button" class="${s.hist ? "hist" : ""}${s.image ? " mig" : ""}" data-l="${k}" data-s="${esc(s.label)}">${s.image ? imgTag(s.image) : ""}${esc(s.label)}${s.qty && !typed.qty ? `<small>${esc(s.qty)}</small>` : ""}</button>`).join("")
+      + migrosShown.map((m, k) => `<button type="button" class="mig" data-m="${k}" data-s="${esc(migrosLabel(m))}">${m.image ? imgTag(m.image) : ""}${esc(migrosLabel(m))}${m.size ? `<small>${esc(m.size)}</small>` : ""}</button>`).join("");
     if (!Array.isArray(migrosRes)) queueMigros(q);
   }
 
@@ -301,13 +301,23 @@
     } catch (e) { toast("Localisation refusée. Autorise-la dans Réglages > Safari > Position."); }
   };
 
+  // Photos Migros : l'adresse contient un "stack" (taille d'image) que Migros ne documente pas.
+  // On essaie plusieurs variantes jusqu'à en trouver une qui s'affiche.
+  const STACKS = ["mo-boxed/v-w-120-h-120", "mo-custom/v-w-120-h-120", "dynamic/resize-width-120", "mo-boxed/v-w-480-h-480", "original"];
+  const imgBase = u => String(u || "").replace(/\/d\/(original|\{stack\})\//, "/d/{stack}/");
+  const imgCand = (u, k) => imgBase(u).includes("{stack}") ? (STACKS[k] ? imgBase(u).replace("{stack}", STACKS[k]) : null) : (k === 0 ? u : null);
+  window.__imgOk = el => { if (el.naturalWidth > 2) { el.style.visibility = "visible"; return; } window.__imgKo(el); };
+  window.__imgKo = el => { const k = +(el.dataset.k || 0) + 1, next = imgCand(el.dataset.u, k);
+    if (next) { el.dataset.k = k; el.src = next; } else el.remove(); };
+  const imgTag = (u, cls) => `<img${cls ? ` class="${cls}"` : ""} src="${esc(imgCand(u, 0))}" data-u="${esc(u)}" data-k="0" alt="" style="visibility:hidden" onload="__imgOk(this)" onerror="__imgKo(this)">`;
+
   // ---------- Affichage ----------
   function show(v) { ["login", "family", "main"].forEach(n => { $("v-" + n).hidden = n !== v; }); if (v === "main") render(); }
 
   function itemHtml(i, store) {
     return `<div class="row-wrap"><div class="del-bg" aria-hidden="true">Supprimer</div><div class="item${i.done ? " done" : ""}" data-id="${i.id}">
       <button class="chk" data-act="toggle" aria-label="${i.done ? "Décocher" : "Cocher"} ${esc(i.name)}"></button>
-      ${i.image ? `<img class="thumb" src="${esc(i.image)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
+      ${i.image ? imgTag(i.image, "thumb") : ""}
       <div class="body" data-act="${store ? "toggle" : "edit"}">
         <span class="name">${esc(i.name)}</span>${i.qty ? `<span class="qty">${esc(i.qty)}</span>` : ""}
         ${!store && i.added_by ? `<span class="who">${esc(i.added_by)}</span>` : ""}
@@ -386,7 +396,7 @@
   function renderPhotos(i, list, failed) {
     photoList = list.slice(0, 8);
     $("it-photos").innerHTML = `<button type="button" class="none" data-p="-1" aria-pressed="${!photoPick.image}">Sans photo</button>` +
-      photoList.map((m, k) => `<button type="button" data-p="${k}" aria-pressed="${photoPick.image === m.image}" title="${esc(m.name || "")}"><img src="${esc(m.image)}" alt="${esc(m.name || "Photo")}"></button>`).join("") +
+      photoList.map((m, k) => `<button type="button" data-p="${k}" aria-pressed="${photoPick.image === m.image}" title="${esc(m.name || "")}">${imgTag(m.image)}</button>`).join("") +
       (!ONLINE ? `<span class="muted">Photos Migros indisponibles en démo</span>` : failed ? `<span class="muted">Migros ne répond pas</span>` : !photoList.length ? `<span class="muted">Aucune photo trouvée</span>` : "");
   }
   $("it-photos").addEventListener("click", e => {
