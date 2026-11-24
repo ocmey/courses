@@ -92,7 +92,15 @@
     (dc.data || []).forEach(r => { S.dict[r.term] = r.category; });
     (od.data || []).forEach(r => { S.order[r.store] = r.categories; if (r.lat != null) S.pos[r.store] = { lat: r.lat, lng: r.lng }; });
     const kn = await sb.from("known_items").select("*").eq("family_id", fid);
-    (kn.data || []).forEach(r => { const c = S.known[r.term]; if (!c || (c.last_used || "") <= r.last_used) S.known[r.term] = strip(r); });
+    if (!kn.error) { // le serveur fait foi (un article oublié sur un téléphone disparaît des autres), sauf envois en attente
+      const known = {};
+      (kn.data || []).forEach(r => { known[r.term] = strip(r); });
+      S.queue.filter(q => q.table === "known_items").forEach(q => {
+        const t = q.op === "delete" ? q.match.term : q.row.term;
+        if (S.known[t]) known[t] = S.known[t]; else delete known[t];
+      });
+      S.known = known;
+    }
     save(); render();
   }
 
@@ -422,13 +430,23 @@
   function toast(t, undo, label, ms) {
     const el = $("toast"); el.classList.toggle("undo", !!undo);
     el.innerHTML = esc(t) + (undo ? `<button type="button" id="b-undo">${esc(label || "Annuler")}</button>` : "");
-    if (undo) $("b-undo").onclick = () => { undo(); el.classList.remove("on", "undo"); };
+    if (undo) $("b-undo").onclick = () => { el.classList.remove("on", "undo"); undo(); };
     el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on", "undo"), ms || (undo ? 4000 : 2200));
   }
+  // Oublier un article des suggestions (pour toute la famille)
+  function forget(term) {
+    const k = S.known[term]; if (!k) return null;
+    delete S.known[term]; save();
+    if (S.family) enqueue({ op: "delete", table: "known_items", match: { family_id: S.family.id, term } });
+    return k;
+  }
+  function unforget(k) { S.known[k.term] = k; save(); pushKnown(k.term); }
   function deleteWithUndo(id) {
     const it = S.items[id]; if (!it) return;
     const copy = { ...it }; deleteItem(id);
-    toast(`${copy.name} supprimé`, () => saveItem(copy));
+    // supprimé sans avoir été acheté, et ajouté une seule fois : sans doute une erreur, on l'oublie aussi
+    const term = norm(copy.name), k = !copy.done && S.known[term] && S.known[term].uses <= 1 ? forget(term) : null;
+    toast(k ? `${copy.name} supprimé et retiré des suggestions` : `${copy.name} supprimé`, () => { saveItem(copy); if (k) unforget(k); });
   }
 
   // ---------- Glisser vers la gauche pour supprimer ----------
@@ -625,8 +643,20 @@
   $("new").addEventListener("input", renderSugg);
   $("new").addEventListener("focus", renderSugg);
   $("new").addEventListener("blur", () => setTimeout(() => { if (document.activeElement !== $("new")) $("sugg").innerHTML = ""; }, 200));
-  $("sugg").addEventListener("pointerdown", e => e.preventDefault()); // garde le clavier ouvert
+  // Appui long sur une suggestion de l'historique : proposer de l'oublier.
+  let pressT = null, pressed = false;
+  $("sugg").addEventListener("pointerdown", e => {
+    e.preventDefault(); // garde le clavier ouvert
+    const b = e.target.closest("button.hist"); pressed = false; clearTimeout(pressT); if (!b) return;
+    pressT = setTimeout(() => {
+      pressed = true; const label = b.dataset.s, term = norm(label);
+      toast(`Retirer « ${label} » des suggestions ?`, () => { const k = forget(term); renderSugg();
+        if (k) toast(`« ${label} » retiré`, () => { unforget(k); renderSugg(); }); }, "Retirer", 5000);
+    }, 550);
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(ev => $("sugg").addEventListener(ev, () => clearTimeout(pressT)));
   $("sugg").addEventListener("click", e => {
+    if (pressed) { pressed = false; return; } // c'était un appui long
     const b = e.target.closest("button[data-s]"); if (!b) return;
     const typed = parse($("new").value);
     let extra = null;

@@ -118,3 +118,4 @@ html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 .scanview video { width: 100% !important; display: block; }
 #scan-msg .found { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--ink); font-size: 16px; }
 #scan-msg .found img { width: 56px; height: 56px; object-fit: contain; background: #fff; border-radius: 8px; }
+.sugg button { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

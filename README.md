@@ -10,6 +10,7 @@ Liste de courses partagée pour 4 iPhone, triée par rayon dans l'ordre de chaqu
 - Vue « En magasin » : choix du magasin, rayons dans l'ordre de ce magasin, gros boutons, les articles cochés descendent.
 - « Rayons » : tu règles l'ordre avec les flèches, une fois par magasin.
 - Magasins situés d'office (OpenStreetMap, une fois au premier lancement ; liste et adresses dans le menu ⋯). Le bouton flèche te situe, choisit le magasin le plus proche et indique sa distance. Le mode « En magasin » choisit aussi tout seul le magasin à moins de 250 m.
+- Retirer un article des suggestions : appui long sur la suggestion, puis « Retirer ». Un article supprimé (glisser) sans avoir été acheté et ajouté une seule fois est retiré automatiquement.
 - Scanner de code-barres (bouton à gauche du champ) : cherche le produit sur migros.ch puis Open Food Facts, montre ce qu'il a trouvé avant d'ajouter.
 - Photo prise avec le téléphone pour un article sans photo (touche l'article > 📷 Photo).
 - Fonctionne sans réseau, puis se resynchronise.
