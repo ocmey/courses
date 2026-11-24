@@ -196,10 +196,10 @@
     const match = label => { const n = norm(label); return n.startsWith(t) || n.split(/[\s'-]+/).some(w => w.startsWith(t)); };
     const known = Object.values(S.known).sort((a, b) => b.uses - a.uses || (b.last_used > a.last_used ? 1 : -1));
     if (!t) { // champ vide : les habituels de la famille
-      known.filter(k => ok(k.term)).slice(0, 8).forEach(k => { seen.add(k.term); out.push({ label: k.label, qty: k.qty, hist: true }); });
+      known.filter(k => ok(k.term)).slice(0, 8).forEach(k => { seen.add(k.term); out.push({ label: k.label, qty: k.qty, hist: true, image: k.image, migros_id: k.migros_id }); });
       return out;
     }
-    known.filter(k => ok(k.term) && match(k.label)).slice(0, 6).forEach(k => { seen.add(k.term); out.push({ label: k.label, qty: k.qty, hist: true }); });
+    known.filter(k => ok(k.term) && match(k.label)).slice(0, 6).forEach(k => { seen.add(k.term); out.push({ label: k.label, qty: k.qty, hist: true, image: k.image, migros_id: k.migros_id }); });
     (window.CATALOG || []).filter(l => ok(norm(l)) && match(l))
       .sort((a, b) => (norm(b).startsWith(t) - norm(a).startsWith(t)) || a.length - b.length)
       .slice(0, 8 - out.length).forEach(l => { seen.add(norm(l)); out.push({ label: l, hist: false }); });
@@ -242,13 +242,25 @@
       } catch (e) { console.warn(e); }
     }, 450);
   }
+  // Photo Migros pour une suggestion : premier produit qui contient tous ses mots
+  function photoFor(label, res) {
+    const words = norm(label).split(/[^a-z0-9]+/).filter(w => w.length >= 3).map(w => w.replace(/(s|x)$/, ""));
+    if (!words.length) return null;
+    return (res || []).find(r => r.image && words.every(w => norm(`${r.brand || ""} ${r.name} ${r.category || ""}`).includes(w))) || null;
+  }
+  let lastMigros = { q: "", res: [] }, suggShown = [];
   function renderSugg(migrosRes) {
     const typed = parse($("new").value), q = typed.name || "";
+    if (Array.isArray(migrosRes)) lastMigros = { q: norm(q), res: migrosRes };
+    // en attendant la réponse, on réutilise les photos de la recherche précédente si elle commence pareil
+    const pool = Array.isArray(migrosRes) ? migrosRes : (lastMigros.q && norm(q).startsWith(lastMigros.q.slice(0, 3)) ? lastMigros.res : []);
     const list = document.activeElement === $("new") || q ? suggest(q) : [];
+    list.forEach(s => { if (!s.image) { const m = photoFor(s.label, pool); if (m) { s.image = m.image; s.migros_id = m.id; } } });
+    suggShown = list;
     const taken = new Set(list.map(s => norm(s.label)).concat([...onList()]));
     migrosShown = Array.isArray(migrosRes) ? migrosRes.filter(m => !taken.has(norm(migrosLabel(m)))).slice(0, 6) : [];
-    $("sugg").innerHTML = (list.length && !q ? `<span class="lbl">Habituels</span>` : "") + list.map(s =>
-      `<button type="button" class="${s.hist ? "hist" : ""}" data-s="${esc(s.label)}">${esc(s.label)}${s.qty && !typed.qty ? `<small>${esc(s.qty)}</small>` : ""}</button>`).join("")
+    $("sugg").innerHTML = (list.length && !q ? `<span class="lbl">Habituels</span>` : "") + list.map((s, k) =>
+      `<button type="button" class="${s.hist ? "hist" : ""}${s.image ? " mig" : ""}" data-l="${k}" data-s="${esc(s.label)}">${s.image ? `<img src="${esc(s.image)}" alt="" onerror="this.remove()">` : ""}${esc(s.label)}${s.qty && !typed.qty ? `<small>${esc(s.qty)}</small>` : ""}</button>`).join("")
       + migrosShown.map((m, k) => `<button type="button" class="mig" data-m="${k}" data-s="${esc(migrosLabel(m))}">${m.image ? `<img src="${esc(m.image)}" alt="" onerror="this.remove()">` : ""}${esc(migrosLabel(m))}${m.size ? `<small>${esc(m.size)}</small>` : ""}</button>`).join("");
     if (!Array.isArray(migrosRes)) queueMigros(q);
   }
@@ -472,6 +484,9 @@
     if (b.dataset.m !== undefined) {
       const m = migrosShown[+b.dataset.m];
       extra = { image: m.image, migros_id: m.id, category: classify(m.category || "") || classify(m.name) };
+    } else if (b.dataset.l !== undefined) {
+      const sg = suggShown[+b.dataset.l];
+      if (sg && sg.image) extra = { image: sg.image, migros_id: sg.migros_id || null };
     }
     addFromText((typed.qty ? typed.qty + " " : "") + b.dataset.s, extra);
     $("new").value = ""; $("new").focus(); renderSugg();
