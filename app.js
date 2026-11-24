@@ -220,7 +220,10 @@
 
   // Produits migros.ch, via la fonction serveur. Si Migros ne répond pas, on fait sans.
   const migrosCache = {}; let migrosShown = [], migrosTimer = null, migrosOff = false;
-  const migrosLabel = m => (m.brand && !norm(m.name).startsWith(norm(m.brand)) ? m.brand + " " : "") + m.name;
+  // Retire les labels alimentaires que Migros colle au nom (« Framboise, végétalien »).
+  const LABELS = /,?\s*\b(v[ée]g[ée]talien(ne)?s?|v[ée]g[ée]tarien(ne)?s?|vegan|veggie)\b/gi;
+  const cleanName = n => n.replace(LABELS, "").replace(/\s*,\s*$/, "").replace(/\s{2,}/g, " ").trim();
+  const migrosLabel = m => cleanName((m.brand && !norm(m.name).startsWith(norm(m.brand)) ? m.brand + " " : "") + m.name);
   async function fetchMigros(q) {
     const key = norm(q);
     if (migrosCache[key]) return migrosCache[key];
