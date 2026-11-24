@@ -16,17 +16,18 @@ window.CATS = [
   { id: "divers",   n: "Divers (papeterie, piles, fleurs)" }
 ];
 
-// a : point approximatif du quartier, pour retrouver le magasin sur OpenStreetMap (app.js, locateStores)
+// addr : adresse donnée par Olivier, convertie en position GPS par le téléphone (app.js, locateStores).
+// Migros Chailly et Denner Valonnette sont dans le même bâtiment (Chailly Center).
 window.STORES = [
-  { id: "chailly",           g: "Migros", n: "Migros Chailly" , a: [46.5292, 6.6500] },
-  { id: "epalinges",         g: "Migros", n: "Migros Epalinges" , a: [46.5480, 6.6690] },
-  { id: "coop-chailly",      g: "Coop",   n: "Coop Chailly" , a: [46.5292, 6.6500] },
-  { id: "coop-epalinges",    g: "Coop",   n: "Coop Epalinges" , a: [46.5480, 6.6690] },
-  { id: "coop-oron",         g: "Coop",   n: "Coop Oron" , a: [46.5713, 6.8247] },
-  { id: "coop-savigny",      g: "Coop",   n: "Coop Savigny" , a: [46.5385, 6.7330] },
-  { id: "denner-bethusy",    g: "Denner", n: "Denner Béthusy" , a: [46.5235, 6.6460] },
-  { id: "denner-valonnette", g: "Denner", n: "Denner Valonnette" , a: [46.5310, 6.6580] },
-  { id: "denner-epalinges",  g: "Denner", n: "Denner Epalinges" , a: [46.5480, 6.6690] }
+  { id: "chailly",           g: "Migros", n: "Migros Chailly" , addr: "Avenue de la Vallonnette 2, 1012 Lausanne" },
+  { id: "epalinges",         g: "Migros", n: "Migros Epalinges" , addr: "Place de la Croix-Blanche 15, 1066 Epalinges" },
+  { id: "coop-chailly",      g: "Coop",   n: "Coop Chailly" , addr: "Avenue de Chailly 9, 1012 Lausanne" },
+  { id: "coop-epalinges",    g: "Coop",   n: "Coop Epalinges" , addr: "Chemin des Croisettes 10, 1066 Epalinges" },
+  { id: "coop-oron",         g: "Coop",   n: "Coop Oron" , addr: "Route de Lausanne 31, 1610 Oron-la-Ville" },
+  { id: "coop-savigny",      g: "Coop",   n: "Coop Savigny" , addr: "Route de la Claie-aux-Moines 1, 1073 Savigny" },
+  { id: "denner-bethusy",    g: "Denner", n: "Denner Béthusy" , addr: "Avenue de Béthusy 93, Lausanne" },
+  { id: "denner-valonnette", g: "Denner", n: "Denner Valonnette" , addr: "Avenue de la Vallonnette 2, 1012 Lausanne" },
+  { id: "denner-epalinges",  g: "Denner", n: "Denner Epalinges" , addr: "Place de la Croix-Blanche 7, 1066 Epalinges" }
 ];
 
 // Mots sans accents, au singulier. Le pluriel (s, x) est reconnu automatiquement.

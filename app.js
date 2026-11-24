@@ -308,53 +308,51 @@
     if (!Object.keys(S.pos).length) return;
     try {
       const me = await here();
-      const near = STORES.filter(s => S.pos[s.id]).map(s => ({ s, d: dist(me, S.pos[s.id]) })).sort((a, b) => a.d - b.d)[0];
+      const near = nearest(me);
       if (near && near.d < 250 && near.s.id !== S.store) {
-        S.store = near.s.id; save(); render(); toast(`Magasin détecté : ${near.s.n}. Tu peux changer en haut.`);
+        S.store = near.s.id; save(); render();
+        const other = near.others[0];
+        if (other) toast(`Magasin détecté : ${near.s.n}`, () => { S.store = other.id; save(); render(); }, other.n, 6000);
+        else toast(`Magasin détecté : ${near.s.n}. Tu peux changer en haut.`);
       }
     } catch (e) { /* refus ou pas de signal : choix manuel */ }
   }
-  // Position des 9 magasins, une fois, depuis OpenStreetMap : pour chaque magasin, le supermarché
-  // de la bonne enseigne le plus proche du quartier (ou dont la rue porte le nom, ex. Béthusy).
-  const OSM_V = 1;
-  async function locateStores() {
-    if (!ONLINE || !navigator.onLine || S.osmV === OSM_V) return true;
-    const q = `[out:json][timeout:25];(nwr["shop"~"supermarket|convenience"]["name"~"Migros|Coop|Denner",i](46.49,6.58,46.60,6.87);
-      nwr["shop"~"supermarket|convenience"]["brand"~"Migros|Coop|Denner",i](46.49,6.58,46.60,6.87););out center tags;`;
-    let els = null;
-    for (const url of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
-      try {
-        const r = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "content-type": "application/x-www-form-urlencoded" } });
-        if (r.ok) { els = (await r.json()).elements || []; break; }
-      } catch (e) { console.warn("OpenStreetMap :", url, e); }
-    }
-    if (!els || !els.length) return false;
+  // Position des 9 magasins, une fois : leurs adresses (categories.js) sont converties en GPS
+  // par le géocodeur officiel suisse (geo.admin.ch), sinon par OpenStreetMap (Nominatim).
+  const POS_V = 2;
+  async function geocode(addr) {
     try {
-      const shops = els.map(e => { const t = e.tags || {};
-        return { lat: e.lat ?? e.center?.lat, lng: e.lon ?? e.center?.lon, t, label: norm(`${t.brand || ""} ${t.name || ""}`),
-          addr: [[t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" "), t["addr:city"]].filter(Boolean).join(", ") };
-      }).filter(x => x.lat && !/migrolino|pronto|vitality|partenaire|partner|satellit|take ?it|to go/.test(x.label));
-      const used = new Set(); S.posInfo = S.posInfo || {};
-      // les magasins avec un nom de rue (Béthusy, Valonnette) d'abord, pour qu'ils ne se volent pas leur Denner
-      const hinted = st => /bethusy|valonnette/.test(norm(st.n));
-      const order = [...STORES].sort((a, b) => hinted(b) - hinted(a));
-      for (const st of order) {
-        if (!st.a) continue;
-        const hint = norm(st.n.split(" ").slice(1).join(" "));
-        const cands = shops.filter((x, k) => !used.has(k) && x.label.includes(norm(st.g)))
-          .map(x => ({ x, k: shops.indexOf(x), d: dist({ lat: st.a[0], lng: st.a[1] }, x),
-            named: norm(`${x.addr} ${x.t.name || ""} ${x.t.branch || ""}`).includes(hint) }))
-          .filter(c => c.d < 1500).sort((a, b) => (b.named - a.named) || (a.d - b.d));
-        if (!cands.length) { // pas trouvé : on efface une éventuelle position enregistrée à la main par erreur
-          if (S.pos[st.id]) { delete S.pos[st.id]; delete S.posInfo[st.id]; if (S.family && S.family.id !== "demo") pushStore(st.id); }
-          continue;
-        }
-        const c = cands[0]; used.add(c.k);
-        S.pos[st.id] = { lat: c.x.lat, lng: c.x.lng }; S.posInfo[st.id] = c.x.addr || c.x.t.name || "";
-        if (S.family && S.family.id !== "demo") pushStore(st.id);
-      }
-      S.osmV = OSM_V; save(); return true;
-    } catch (e) { console.warn("OpenStreetMap :", e); return false; }
+      const r = await fetch("https://api3.geo.admin.ch/rest/services/api/SearchServer?type=locations&origins=address&limit=1&sr=4326&searchText=" + encodeURIComponent(addr));
+      const a = ((await r.json()).results || [])[0];
+      if (a && a.attrs && a.attrs.lat) return { lat: +a.attrs.lat, lng: +a.attrs.lon };
+    } catch (e) { console.warn("geo.admin :", e); }
+    try {
+      const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ch&q=" + encodeURIComponent(addr));
+      const a = (await r.json())[0];
+      if (a) return { lat: +a.lat, lng: +a.lon };
+    } catch (e) { console.warn("Nominatim :", e); }
+    return null;
+  }
+  async function locateStores() {
+    if (!ONLINE || !navigator.onLine || S.osmV === POS_V) return true;
+    S.posInfo = S.posInfo || {}; let ok = true;
+    for (const st of STORES) {
+      if (!st.addr) continue;
+      const p = await geocode(st.addr);
+      if (!p) { ok = false; continue; }
+      S.pos[st.id] = p; S.posInfo[st.id] = st.addr;
+      if (S.family && S.family.id !== "demo") pushStore(st.id);
+    }
+    if (ok) S.osmV = POS_V;
+    save(); return ok;
+  }
+  // Magasins à la même adresse (Chailly Center : Migros et Denner) : le GPS ne peut pas les départager.
+  function nearest(me) {
+    const all = STORES.filter(s => S.pos[s.id]).map(s => ({ s, d: dist(me, S.pos[s.id]) })).sort((a, b) => a.d - b.d);
+    if (!all.length) return null;
+    const same = all.filter(x => x.d - all[0].d < 30 && dist(S.pos[x.s.id], S.pos[all[0].s.id]) < 40);
+    const cur = same.find(x => x.s.id === S.store); // on garde le magasin déjà choisi s'il en fait partie
+    return { ...(cur || all[0]), others: same.filter(x => x !== (cur || all[0])).map(x => x.s) };
   }
 
   // Bouton « me situer » : choisit le magasin le plus proche et dit à quelle distance il est.
@@ -363,12 +361,15 @@
     try {
       const me = await here();
       const osmOk = await locateStores();
-      const near = STORES.filter(s => S.pos[s.id]).map(s => ({ s, d: dist(me, S.pos[s.id]) })).sort((a, b) => a.d - b.d)[0];
-      if (!near) return toast("Les magasins ne sont pas encore situés (OpenStreetMap ne répond pas). Réessaie plus tard.");
+      const near = nearest(me);
+      if (!near) return toast("Les magasins ne sont pas encore situés (pas de réseau ?). Réessaie plus tard.");
       if (near.s.id !== S.store) { S.store = near.s.id; save(); render(); }
       const d = near.d < 1000 ? `${Math.round(near.d / 10) * 10} m` : `${(near.d / 1000).toFixed(1).replace(".", ",")} km`;
-      toast((near.d < 250 ? `Tu es à ${near.s.n}` : `Le plus proche : ${near.s.n}, à ${d}`)
-        + (osmOk ? "" : " (attention : positions des magasins pas encore vérifiées sur OpenStreetMap)"), null, null, osmOk ? 3000 : 6000);
+      const msg = (near.d < 250 ? `Tu es à ${near.s.n}` : `Le plus proche : ${near.s.n}, à ${d}`)
+        + (osmOk ? "" : " (positions des magasins pas toutes trouvées)");
+      const other = near.others[0];
+      if (other) toast(msg, () => { S.store = other.id; save(); render(); toast(`Magasin : ${other.n}`); }, other.n, 6000);
+      else toast(msg, null, null, osmOk ? 3000 : 6000);
     } catch (e) { toast("Localisation refusée. Autorise-la dans Réglages > Safari > Position."); }
   };
 
