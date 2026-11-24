@@ -317,13 +317,22 @@
       }
     } catch (e) { /* refus ou pas de signal : choix manuel */ }
   }
+  // 📍 = « où suis-je ? ». Si un magasin connu est à moins de 250 m, il est choisi.
+  // Sinon, l'app propose d'enregistrer cet endroit comme position du magasin affiché (jamais sans confirmation).
   $("b-here").onclick = async () => {
-    const st = STORES.find(s => s.id === S.store);
     toast("Localisation…");
     try {
       const me = await here();
-      S.pos[S.store] = { lat: me.lat, lng: me.lng }; save(); pushStore(S.store);
-      toast(`Position de ${st.n} enregistrée (précision ${Math.round(me.acc)} m)`);
+      const near = STORES.filter(s => S.pos[s.id]).map(s => ({ s, d: dist(me, S.pos[s.id]) })).sort((a, b) => a.d - b.d)[0];
+      if (near && near.d < 250) {
+        if (near.s.id !== S.store) { S.store = near.s.id; save(); render(); }
+        return toast(`Tu es à ${near.s.n}`);
+      }
+      const st = STORES.find(s => s.id === S.store);
+      toast(`Aucun magasin connu ici. Si tu es à ${st.n} :`, () => {
+        S.pos[S.store] = { lat: me.lat, lng: me.lng }; save(); pushStore(S.store);
+        toast(`Position de ${st.n} enregistrée (précision ${Math.round(me.acc)} m)`);
+      }, "Enregistrer ici", 7000);
     } catch (e) { toast("Localisation refusée. Autorise-la dans Réglages > Safari > Position."); }
   };
 
@@ -381,11 +390,11 @@
   }
 
   let toastT;
-  function toast(t, undo) {
+  function toast(t, undo, label, ms) {
     const el = $("toast"); el.classList.toggle("undo", !!undo);
-    el.innerHTML = esc(t) + (undo ? `<button type="button" id="b-undo">Annuler</button>` : "");
+    el.innerHTML = esc(t) + (undo ? `<button type="button" id="b-undo">${esc(label || "Annuler")}</button>` : "");
     if (undo) $("b-undo").onclick = () => { undo(); el.classList.remove("on", "undo"); };
-    el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on", "undo"), undo ? 4000 : 2200);
+    el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on", "undo"), ms || (undo ? 4000 : 2200));
   }
   function deleteWithUndo(id) {
     const it = S.items[id]; if (!it) return;
