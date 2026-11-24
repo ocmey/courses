@@ -317,24 +317,55 @@
       }
     } catch (e) { /* refus ou pas de signal : choix manuel */ }
   }
-  // 📍 = « où suis-je ? ». Si un magasin connu est à moins de 250 m, il est choisi.
-  // Sinon, l'app propose d'enregistrer cet endroit comme position du magasin affiché (jamais sans confirmation).
+  // Position des 9 magasins, une fois, depuis OpenStreetMap : pour chaque magasin, le supermarché
+  // de la bonne enseigne le plus proche du quartier (ou dont la rue porte le nom, ex. Béthusy).
+  const OSM_V = 1;
+  async function locateStores() {
+    if (!ONLINE || !navigator.onLine || S.osmV === OSM_V) return;
+    const q = `[out:json][timeout:25];(nwr["shop"~"supermarket|convenience"]["name"~"Migros|Coop|Denner",i](46.49,6.58,46.60,6.87);
+      nwr["shop"~"supermarket|convenience"]["brand"~"Migros|Coop|Denner",i](46.49,6.58,46.60,6.87););out center tags;`;
+    try {
+      const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q),
+        headers: { "content-type": "application/x-www-form-urlencoded" } });
+      const els = (await r.json()).elements || [];
+      const shops = els.map(e => { const t = e.tags || {};
+        return { lat: e.lat ?? e.center?.lat, lng: e.lon ?? e.center?.lon, t, label: norm(`${t.brand || ""} ${t.name || ""}`),
+          addr: [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") + (t["addr:city"] ? `, ${t["addr:city"]}` : "") };
+      }).filter(x => x.lat && !/migrolino|pronto|vitality|partenaire|partner|satellit|take ?it|to go/.test(x.label));
+      const used = new Set(); S.posInfo = S.posInfo || {};
+      // les magasins avec un nom de rue (Béthusy, Valonnette) d'abord, pour qu'ils ne se volent pas leur Denner
+      const hinted = st => /bethusy|valonnette/.test(norm(st.n));
+      const order = [...STORES].sort((a, b) => hinted(b) - hinted(a));
+      for (const st of order) {
+        if (!st.a) continue;
+        const hint = norm(st.n.split(" ").slice(1).join(" "));
+        const cands = shops.filter((x, k) => !used.has(k) && x.label.includes(norm(st.g)))
+          .map(x => ({ x, k: shops.indexOf(x), d: dist({ lat: st.a[0], lng: st.a[1] }, x),
+            named: norm(`${x.addr} ${x.t.name || ""} ${x.t.branch || ""}`).includes(hint) }))
+          .filter(c => c.d < 1500).sort((a, b) => (b.named - a.named) || (a.d - b.d));
+        if (!cands.length) continue;
+        const c = cands[0]; used.add(c.k);
+        S.pos[st.id] = { lat: c.x.lat, lng: c.x.lng }; S.posInfo[st.id] = c.x.addr || c.x.t.name || "";
+        if (S.family && S.family.id !== "demo") pushStore(st.id);
+      }
+      S.osmV = OSM_V; save();
+    } catch (e) { console.warn("OpenStreetMap :", e); }
+  }
+
+  // Bouton « me situer » : choisit le magasin le plus proche et dit à quelle distance il est.
   $("b-here").onclick = async () => {
     toast("Localisation…");
     try {
       const me = await here();
+      if (!Object.keys(S.pos).length) await locateStores();
       const near = STORES.filter(s => S.pos[s.id]).map(s => ({ s, d: dist(me, S.pos[s.id]) })).sort((a, b) => a.d - b.d)[0];
-      if (near && near.d < 250) {
-        if (near.s.id !== S.store) { S.store = near.s.id; save(); render(); }
-        return toast(`Tu es à ${near.s.n}`);
-      }
-      const st = STORES.find(s => s.id === S.store);
-      toast(`Aucun magasin connu ici. Si tu es à ${st.n} :`, () => {
-        S.pos[S.store] = { lat: me.lat, lng: me.lng }; save(); pushStore(S.store);
-        toast(`Position de ${st.n} enregistrée (précision ${Math.round(me.acc)} m)`);
-      }, "Enregistrer ici", 7000);
+      if (!near) return toast("Les magasins ne sont pas encore situés. Réessaie avec du réseau.");
+      if (near.s.id !== S.store) { S.store = near.s.id; save(); render(); }
+      const d = near.d < 1000 ? `${Math.round(near.d / 10) * 10} m` : `${(near.d / 1000).toFixed(1).replace(".", ",")} km`;
+      toast(near.d < 250 ? `Tu es à ${near.s.n}` : `Le plus proche : ${near.s.n}, à ${d}`);
     } catch (e) { toast("Localisation refusée. Autorise-la dans Réglages > Safari > Position."); }
   };
+
 
   // Photos Migros : l'adresse contient un "stack" (taille d'image) que Migros ne documente pas.
   // On essaie plusieurs variantes jusqu'à en trouver une qui s'affiche.
@@ -486,6 +517,8 @@
   // ---------- Réglages ----------
   $("b-menu").onclick = () => {
     $("menu-family").textContent = S.family ? `${S.family.name}. Code à partager avec la famille : ${S.family.code}` : "";
+    $("menu-stores").innerHTML = STORES.map(st => `<li><b>${esc(st.n)}</b> : ${S.pos[st.id]
+      ? esc((S.posInfo || {})[st.id] || "position enregistrée") : "pas encore situé"}</li>`).join("");
     $("b-logout").hidden = !ONLINE;
     $("d-menu").showModal();
   };
@@ -585,7 +618,7 @@
     S.me = { name: m.display_name }; S.family = m.families;
     if (changed) { S.items = {}; S.queue = []; S.dict = {}; S.order = {}; S.pos = {}; S.known = {}; }
     save(); show("main");
-    await flush(); await pull(); subscribe();
+    await flush(); await pull(); subscribe(); locateStores();
   }
 
   async function boot() {

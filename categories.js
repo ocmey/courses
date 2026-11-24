@@ -16,16 +16,17 @@ window.CATS = [
   { id: "divers",   n: "Divers (papeterie, piles, fleurs)" }
 ];
 
+// a : point approximatif du quartier, pour retrouver le magasin sur OpenStreetMap (app.js, locateStores)
 window.STORES = [
-  { id: "chailly",           g: "Migros", n: "Migros Chailly" },
-  { id: "epalinges",         g: "Migros", n: "Migros Epalinges" },
-  { id: "coop-chailly",      g: "Coop",   n: "Coop Chailly" },
-  { id: "coop-epalinges",    g: "Coop",   n: "Coop Epalinges" },
-  { id: "coop-oron",         g: "Coop",   n: "Coop Oron" },
-  { id: "coop-savigny",      g: "Coop",   n: "Coop Savigny" },
-  { id: "denner-bethusy",    g: "Denner", n: "Denner Béthusy" },
-  { id: "denner-valonnette", g: "Denner", n: "Denner Valonnette" },
-  { id: "denner-epalinges",  g: "Denner", n: "Denner Epalinges" }
+  { id: "chailly",           g: "Migros", n: "Migros Chailly" , a: [46.5292, 6.6500] },
+  { id: "epalinges",         g: "Migros", n: "Migros Epalinges" , a: [46.5480, 6.6690] },
+  { id: "coop-chailly",      g: "Coop",   n: "Coop Chailly" , a: [46.5292, 6.6500] },
+  { id: "coop-epalinges",    g: "Coop",   n: "Coop Epalinges" , a: [46.5480, 6.6690] },
+  { id: "coop-oron",         g: "Coop",   n: "Coop Oron" , a: [46.5713, 6.8247] },
+  { id: "coop-savigny",      g: "Coop",   n: "Coop Savigny" , a: [46.5385, 6.7330] },
+  { id: "denner-bethusy",    g: "Denner", n: "Denner Béthusy" , a: [46.5235, 6.6460] },
+  { id: "denner-valonnette", g: "Denner", n: "Denner Valonnette" , a: [46.5310, 6.6580] },
+  { id: "denner-epalinges",  g: "Denner", n: "Denner Epalinges" , a: [46.5480, 6.6690] }
 ];
 
 // Mots sans accents, au singulier. Le pluriel (s, x) est reconnu automatiquement.

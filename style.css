@@ -107,3 +107,6 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .row-wrap .item.dragging { transition: none; }
 .toast.undo { pointer-events: auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; }
 .toast.undo button { background: transparent; color: var(--accent); padding: 4px 8px; font-size: 14px; }
+#b-here.loc { display: inline-flex; align-items: center; justify-content: center; }
+#b-here.loc svg { display: block; }
+.small { font-size: .85em; margin: 0; padding-left: 1.1em; }
