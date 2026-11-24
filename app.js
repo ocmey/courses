@@ -165,6 +165,7 @@
     saveItem({ id: uuid(), name: p.name, qty: p.qty, category: cat, done: false, image: img, migros_id: mid,
       added_by: S.me ? S.me.name : null, done_by: null, done_at: null, done_store: null, created_at: now() });
     toast(cat ? `Ajouté dans ${catById(cat).n}` : "Ajouté. Choisis le rayon en haut de la liste.");
+    if (!img) autoImage(norm(p.name));
   }
   function storeOrder(s) {
     const o = (S.order[s] || []).filter(id => catById(id));
@@ -204,6 +205,19 @@
       .slice(0, 8 - out.length).forEach(l => { seen.add(norm(l)); out.push({ label: l, hist: false }); });
     return out;
   }
+  // Photo automatique : premier produit Migros qui contient tous les mots tapés.
+  async function autoImage(term) {
+    if (!ONLINE || !navigator.onLine || term.length < 3) return;
+    try {
+      const res = await fetchMigros(term);
+      const words = term.split(/[^a-z0-9]+/).filter(w => w.length >= 3).map(w => w.replace(/(s|x)$/, ""));
+      const m = res.find(r => r.image && words.every(w => norm(`${r.brand || ""} ${r.name} ${r.category || ""}`).includes(w)));
+      if (!m) return;
+      Object.values(S.items).filter(i => !i.image && norm(i.name) === term).forEach(i => { i.image = m.image; i.migros_id = m.id; saveItem(i); });
+      if (S.known[term] && !S.known[term].image) { S.known[term].image = m.image; S.known[term].migros_id = m.id; pushKnown(term); }
+    } catch (e) {}
+  }
+
   // Produits migros.ch, via la fonction serveur. Si Migros ne répond pas, on fait sans.
   const migrosCache = {}; let migrosShown = [], migrosTimer = null, migrosOff = false;
   const migrosLabel = m => (m.brand && !norm(m.name).startsWith(norm(m.brand)) ? m.brand + " " : "") + m.name;
@@ -279,13 +293,13 @@
   function show(v) { ["login", "family", "main"].forEach(n => { $("v-" + n).hidden = n !== v; }); if (v === "main") render(); }
 
   function itemHtml(i, store) {
-    return `<div class="item${i.done ? " done" : ""}" data-id="${i.id}">
+    return `<div class="row-wrap"><div class="del-bg" aria-hidden="true">Supprimer</div><div class="item${i.done ? " done" : ""}" data-id="${i.id}">
       <button class="chk" data-act="toggle" aria-label="${i.done ? "Décocher" : "Cocher"} ${esc(i.name)}"></button>
       ${i.image ? `<img class="thumb" src="${esc(i.image)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
       <div class="body" data-act="${store ? "toggle" : "edit"}">
         <span class="name">${esc(i.name)}</span>${i.qty ? `<span class="qty">${esc(i.qty)}</span>` : ""}
         ${!store && i.added_by ? `<span class="who">${esc(i.added_by)}</span>` : ""}
-      </div></div>`;
+      </div></div></div>`;
   }
 
   function render() {
@@ -319,15 +333,68 @@
   }
 
   let toastT;
-  function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2200); }
+  function toast(t, undo) {
+    const el = $("toast"); el.classList.toggle("undo", !!undo);
+    el.innerHTML = esc(t) + (undo ? `<button type="button" id="b-undo">Annuler</button>` : "");
+    if (undo) $("b-undo").onclick = () => { undo(); el.classList.remove("on", "undo"); };
+    el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on", "undo"), undo ? 4000 : 2200);
+  }
+  function deleteWithUndo(id) {
+    const it = S.items[id]; if (!it) return;
+    const copy = { ...it }; deleteItem(id);
+    toast(`${copy.name} supprimé`, () => saveItem(copy));
+  }
+
+  // ---------- Glisser vers la gauche pour supprimer ----------
+  let sw = null;
+  $("list").addEventListener("touchstart", e => {
+    const it = e.target.closest(".item"); if (!it || e.touches.length > 1) return;
+    sw = { el: it, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, on: false };
+  }, { passive: true });
+  $("list").addEventListener("touchmove", e => {
+    if (!sw) return;
+    const dx = e.touches[0].clientX - sw.x, dy = e.touches[0].clientY - sw.y;
+    if (!sw.on) { if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5 && dx < 0) { sw.on = true; sw.el.classList.add("dragging"); } else if (Math.abs(dy) > 10) { sw = null; return; } else return; }
+    sw.dx = Math.min(0, dx); sw.el.style.transform = `translateX(${sw.dx}px)`;
+  }, { passive: true });
+  $("list").addEventListener("touchend", () => {
+    if (!sw) return; const s = sw; sw = null;
+    if (!s.on) return;
+    s.el.classList.remove("dragging");
+    swipedAt = Date.now();
+    if (s.dx < -Math.min(120, s.el.offsetWidth * 0.35)) {
+      s.el.style.transform = "translateX(-100%)";
+      setTimeout(() => deleteWithUndo(s.el.dataset.id), 160);
+    } else s.el.style.transform = "";
+  });
+  let swipedAt = 0;
 
   // ---------- Fiche article ----------
-  let editing = null;
+  let editing = null, photoPick = null, photoList = [];
+  function renderPhotos(i, list, failed) {
+    photoList = list.slice(0, 8);
+    $("it-photos").innerHTML = `<button type="button" class="none" data-p="-1" aria-pressed="${!photoPick.image}">Sans photo</button>` +
+      photoList.map((m, k) => `<button type="button" data-p="${k}" aria-pressed="${photoPick.image === m.image}" title="${esc(m.name || "")}"><img src="${esc(m.image)}" alt="${esc(m.name || "Photo")}"></button>`).join("") +
+      (!ONLINE ? `<span class="muted">Photos Migros indisponibles en démo</span>` : failed ? `<span class="muted">Migros ne répond pas</span>` : !photoList.length ? `<span class="muted">Aucune photo trouvée</span>` : "");
+  }
+  $("it-photos").addEventListener("click", e => {
+    const b = e.target.closest("button[data-p]"); if (!b) return;
+    const k = +b.dataset.p, m = photoList[k];
+    photoPick = k < 0 ? { image: null, migros_id: null } : { image: m.image, migros_id: m.id || null };
+    $("it-photos").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  });
   function openItem(id) {
     const i = S.items[id]; if (!i) return; editing = id;
     $("it-name").value = i.name; $("it-qty").value = i.qty || "";
     $("it-cat").innerHTML = `<option value="">À classer</option>` + catOptions(i.category);
+    photoPick = { image: i.image || null, migros_id: i.migros_id || null };
+    renderPhotos(i, i.image ? [{ id: i.migros_id, image: i.image }] : []);
     $("d-item").showModal();
+    if (ONLINE && navigator.onLine) fetchMigros(i.name).then(res => {
+      if (editing !== id) return;
+      const list = (i.image ? [{ id: i.migros_id, image: i.image }] : []).concat(res.filter(m => m.image && m.image !== i.image));
+      renderPhotos(i, list);
+    }).catch(() => renderPhotos(i, i.image ? [{ id: i.migros_id, image: i.image }] : [], true));
   }
   $("f-item").addEventListener("submit", e => {
     e.preventDefault();
@@ -335,10 +402,12 @@
     const cat = $("it-cat").value || null;
     i.name = $("it-name").value.trim() || i.name; i.qty = $("it-qty").value.trim() || null;
     if (cat && cat !== i.category) learn(i.name, cat);
-    i.category = cat; saveItem(i); $("d-item").close();
+    i.category = cat; i.image = photoPick.image; i.migros_id = photoPick.migros_id;
+    const term = norm(i.name); if (S.known[term]) { S.known[term].image = i.image; S.known[term].migros_id = i.migros_id; pushKnown(term); }
+    saveItem(i); $("d-item").close();
   });
   $("it-cancel").onclick = () => $("d-item").close();
-  $("it-del").onclick = () => { if (editing) deleteItem(editing); $("d-item").close(); };
+  $("it-del").onclick = () => { if (editing) deleteWithUndo(editing); $("d-item").close(); };
 
   // ---------- Ordre des rayons ----------
   function renderOrder() {
@@ -377,6 +446,7 @@
 
   // ---------- Événements de la liste ----------
   $("list").addEventListener("click", e => {
+    if (Date.now() - swipedAt < 350) return; // fin d'un glissement, pas un tap
     const a = e.target.closest("[data-act]"); if (!a) return;
     const id = a.closest(".item").dataset.id;
     if (a.dataset.act === "toggle") toggle(id); else openItem(id);
