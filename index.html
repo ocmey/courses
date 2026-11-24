@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 <div id="app">
@@ -97,7 +97,7 @@
     <h2>Scanner un code-barres</h2>
     <div id="scan-view" class="scanview"></div>
     <div id="scan-msg" class="muted">Vise le code-barres de l'emballage.</div>
-    <div class="row gap"><span class="grow"></span><button type="button" id="scan-close" class="ghost">Fermer</button></div>
+    <div class="row gap"><button type="button" id="scan-torch" class="ghost" hidden>🔦 Lampe</button><span class="grow"></span><button type="button" id="scan-close" class="ghost">Fermer</button></div>
   </div>
 </dialog>
 
@@ -126,9 +126,9 @@
 
 <div id="toast" class="toast" role="status"></div>
 
-<script src="config.js?v=22"></script>
-<script src="categories.js?v=22"></script>
+<script src="config.js?v=23"></script>
+<script src="categories.js?v=23"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>

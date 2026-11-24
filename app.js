@@ -628,12 +628,24 @@
       const F = window.Html5QrcodeSupportedFormats;
       scanner = scanner || new Html5Qrcode("scan-view", { verbose: false,
         formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
-      await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 260, height: 120 } }, code => onCode(code), () => {});
+      await scanner.start({ facingMode: "environment" }, {
+        fps: 20, qrbox: (w, h) => ({ width: Math.round(w * 0.85), height: Math.round(Math.min(h, w) * 0.45) }),
+        videoConstraints: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 }, advanced: [{ focusMode: "continuous" }] }
+      }, code => onCode(code), () => {});
+      // Lampe : seulement si le navigateur sait l'allumer (pas toujours le cas de Safari sur iPhone)
+      let caps = {}; try { caps = scanner.getRunningTrackCapabilities() || {}; } catch (e) {}
+      $("scan-torch").hidden = !caps.torch; torchOn = false; $("scan-torch").textContent = "🔦 Lampe";
     } catch (e) {
       $("scan-msg").textContent = "Caméra indisponible. Autorise-la dans Réglages > Safari > Caméra.";
     }
   };
   $("scan-close").onclick = () => $("d-scan").close();
+  let torchOn = false;
+  $("scan-torch").onclick = async () => {
+    try { await scanner.applyVideoConstraints({ advanced: [{ torch: !torchOn }] }); torchOn = !torchOn;
+      $("scan-torch").textContent = torchOn ? "🔦 Éteindre" : "🔦 Lampe"; }
+    catch (e) { toast("Lampe indisponible sur ce téléphone"); $("scan-torch").hidden = true; }
+  };
   $("d-scan").addEventListener("close", stopScan);
 
   $("f-add").addEventListener("submit", e => {
