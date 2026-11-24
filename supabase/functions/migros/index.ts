@@ -48,13 +48,15 @@ function toProduct(p: any) {
   if (typeof img === "string") img = img.replace("{stack}", "original").replace("{width}", "120").replace("{height}", "120");
   const crumbs = pick(p, "breadcrumb", "productInformation.mainInformation.category", "categories") || [];
   const category = Array.isArray(crumbs) ? crumbs.map((c: any) => c?.name ?? c).filter(Boolean).join(" > ") : String(crumbs);
+  // "title" = le nom exact affiché sur migros.ch (« Farmer Classic · Soft · Framboise, végétalien »)
+  const title = pick(p, "title");
   const variant = pick(p, "versioning");
-  const base = pick(p, "name", "title") ?? "";
+  const base = pick(p, "name") ?? "";
   return {
     id: String(pick(p, "migrosId", "uid", "id") ?? ""),
-    name: variant && !String(base).includes(variant) ? `${base} ${variant}` : base,
+    name: title || (variant && !String(base).includes(variant) ? `${base} ${variant}` : base),
     brand: pick(p, "brand.name", "brand", "brandLine", "productInformation.mainInformation.brand.name") ?? null,
-    size: pick(p, "productInformation.mainInformation.quantity", "quantity", "productInformation.mainInformation.unit") ?? null,
+    size: pick(p, "productInformation.mainInformation.quantity", "offer.quantity", "quantity", "productInformation.mainInformation.unit") ?? null,
     image: typeof img === "string" ? img : null,
     category,
   };
@@ -88,13 +90,13 @@ Deno.serve(async (req) => {
   // Cache en base (table migros_cache), avec les droits du service
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   if (!debug) {
-    const { data } = await db.from("migros_cache").select("results, fetched_at").eq("query", "fr:" + q).maybeSingle();
+    const { data } = await db.from("migros_cache").select("results, fetched_at").eq("query", "fr2:" + q).maybeSingle();
     if (data && Date.now() - new Date(data.fetched_at).getTime() < CACHE_DAYS * 864e5) return json({ products: data.results, cached: true });
   }
   try {
     const res = await search(q, debug);
     if (debug) return json(res);
-    await db.from("migros_cache").upsert({ query: "fr:" + q, results: res, fetched_at: new Date().toISOString() });
+    await db.from("migros_cache").upsert({ query: "fr2:" + q, results: res, fetched_at: new Date().toISOString() });
     return json({ products: res });
   } catch (e) {
     return json({ products: [], error: String((e as Error).message || e) }, 200);
