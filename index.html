@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f7a5b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Courses">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Courses</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- Connexion -->
+  <section id="v-login" class="view" hidden>
+    <h1>Courses</h1>
+    <p>Connecte-toi avec ton e-mail et un mot de passe. La première fois, choisis « Créer mon compte ».</p>
+    <form id="f-login" class="stack">
+      <input id="login-email" type="email" required placeholder="prenom@exemple.ch" autocomplete="email">
+      <input id="login-pass" type="password" required minlength="6" placeholder="Mot de passe (6 caractères min.)" autocomplete="current-password">
+      <button type="submit">Se connecter</button>
+      <button type="button" id="b-signup" class="ghost">Créer mon compte</button>
+    </form>
+    <p id="login-msg" class="muted"></p>
+  </section>
+
+  <!-- Famille -->
+  <section id="v-family" class="view" hidden>
+    <h1>Bienvenue</h1>
+    <form id="f-family" class="stack">
+      <label for="fam-name">Ton prénom</label>
+      <input id="fam-name" required placeholder="Olivier">
+      <label for="fam-code">Code de la famille (si quelqu'un l'a déjà créée)</label>
+      <input id="fam-code" placeholder="ex. A1B2C3" autocapitalize="characters">
+      <button type="submit">Continuer</button>
+    </form>
+    <p class="muted">Sans code, une nouvelle famille est créée et tu reçois son code à partager.</p>
+    <p id="fam-msg" class="err"></p>
+  </section>
+
+  <!-- Liste -->
+  <section id="v-main" class="view" hidden>
+    <header class="top">
+      <div class="row">
+        <h1 class="title">Courses</h1>
+        <span id="sync" class="sync" title="État de la synchronisation"></span>
+        <button id="b-menu" class="icon" aria-label="Réglages">⋯</button>
+      </div>
+      <div class="seg" role="group" aria-label="Mode">
+        <button id="m-list" aria-pressed="true">Liste</button>
+        <button id="m-store" aria-pressed="false">En magasin</button>
+      </div>
+      <div id="store-row" class="row" hidden>
+        <select id="store" aria-label="Magasin"></select>
+        <button id="b-here" class="ghost" aria-label="Enregistrer la position de ce magasin" title="Je suis dans ce magasin">📍</button>
+        <button id="b-order" class="ghost">Rayons</button>
+      </div>
+    </header>
+    <main id="list" class="list"></main>
+    <form id="f-add" class="addbar">
+      <div id="sugg" class="sugg" aria-label="Suggestions"></div>
+      <div class="row">
+        <input id="new" placeholder="Ajouter… ex. 2 l lait" autocomplete="off" autocorrect="off" enterkeyhint="done">
+        <button type="submit" aria-label="Ajouter">+</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<!-- Fiche article -->
+<dialog id="d-item">
+  <form method="dialog" id="f-item" class="stack">
+    <h2>Article</h2>
+    <label for="it-name">Nom</label><input id="it-name" required>
+    <label for="it-qty">Quantité</label><input id="it-qty" placeholder="ex. 2 l, 500 g, 3">
+    <label for="it-cat">Rayon</label><select id="it-cat"></select>
+    <div class="row gap">
+      <button type="button" id="it-del" class="danger">Supprimer</button>
+      <span class="grow"></span>
+      <button type="button" id="it-cancel" class="ghost">Annuler</button>
+      <button type="submit" id="it-save">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Ordre des rayons -->
+<dialog id="d-order">
+  <div class="stack">
+    <h2 id="order-title">Ordre des rayons</h2>
+    <p class="muted">Dans l'ordre où tu passes devant en entrant dans le magasin.</p>
+    <ol id="order-list" class="order"></ol>
+    <div class="row gap"><span class="grow"></span><button type="button" id="order-done">Terminé</button></div>
+  </div>
+</dialog>
+
+<!-- Réglages -->
+<dialog id="d-menu">
+  <div class="stack">
+    <h2>Réglages</h2>
+    <p id="menu-family" class="muted"></p>
+    <button type="button" id="b-clear" class="ghost">Retirer les articles cochés</button>
+    <button type="button" id="b-logout" class="ghost">Se déconnecter</button>
+    <div class="row gap"><span class="grow"></span><button type="button" id="menu-close">Fermer</button></div>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" role="status"></div>
+
+<script src="config.js"></script>
+<script src="categories.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
