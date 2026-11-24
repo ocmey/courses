@@ -155,17 +155,18 @@
       if (p.qty) old.qty = p.qty; remember(old.name, old.category, p.qty); saveItem(old);
       return toast(`${old.name} remis sur la liste`);
     }
-    if (S.known[norm(p.name)]) p.name = S.known[norm(p.name)].label;
+    // Texte tapé puis « + » : on garde exactement ce qui est écrit, sans photo ni produit Migros.
+    // Photo et produit seulement si on touche une suggestion (extra).
+    const typed = !extra;
     const k = S.known[norm(p.name)];
     const cat = (k && k.category) || (extra && extra.category) || classify(p.name);
     if (!p.qty && k && k.qty) p.qty = k.qty;
-    const kk = S.known[norm(p.name)] || {};
+    const kk = typed ? {} : (S.known[norm(p.name)] || {});
     const img = (extra && extra.image) || kk.image || null, mid = (extra && extra.migros_id) || kk.migros_id || null;
     remember(p.name, cat, p.qty, { image: img, migros_id: mid });
     saveItem({ id: uuid(), name: p.name, qty: p.qty, category: cat, done: false, image: img, migros_id: mid,
       added_by: S.me ? S.me.name : null, done_by: null, done_at: null, done_store: null, created_at: now() });
     toast(cat ? `Ajouté dans ${catById(cat).n}` : "Ajouté. Choisis le rayon en haut de la liste.");
-    if (!img) autoImage(norm(p.name));
   }
   function storeOrder(s) {
     const o = (S.order[s] || []).filter(id => catById(id));
@@ -211,18 +212,6 @@
       .sort((a, b) => (norm(b).startsWith(t) - norm(a).startsWith(t)) || a.length - b.length)
       .slice(0, 8 - out.length).forEach(l => { seen.add(norm(l)); out.push({ label: l, hist: false }); });
     return out;
-  }
-  // Photo automatique : premier produit Migros qui contient tous les mots tapés.
-  async function autoImage(term) {
-    if (!ONLINE || !navigator.onLine || term.length < 3) return;
-    try {
-      const res = await fetchMigros(term);
-      const words = term.split(/[^a-z0-9]+/).filter(w => w.length >= 3).map(w => w.replace(/(s|x)$/, ""));
-      const m = res.find(r => r.image && words.every(w => norm(`${r.brand || ""} ${r.name} ${r.category || ""}`).includes(w)));
-      if (!m) return;
-      Object.values(S.items).filter(i => !i.image && norm(i.name) === term).forEach(i => { i.image = m.image; i.migros_id = m.id; saveItem(i); });
-      if (S.known[term] && !S.known[term].image) { S.known[term].image = m.image; S.known[term].migros_id = m.id; pushKnown(term); }
-    } catch (e) {}
   }
 
   // Produits migros.ch, via la fonction serveur. Si Migros ne répond pas, on fait sans.
