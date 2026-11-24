@@ -575,6 +575,60 @@
     i.category = s.value; learn(i.name, s.value); saveItem(i);
     toast(`« ${i.name} » ira désormais dans ${catById(s.value).n}`);
   });
+  // ---------- Scanner de code-barres ----------
+  // La bibliothèque (vendor/html5-qrcode.min.js, 370 Ko) n'est chargée qu'au premier scan.
+  // Recherche du produit : d'abord migros.ch (par le numéro EAN), puis Open Food Facts.
+  let scanner = null, scanBusy = false;
+  const loadScript = src => new Promise((ok, ko) => { const el = document.createElement("script"); el.src = src; el.onload = ok; el.onerror = ko; document.head.appendChild(el); });
+  async function stopScan() { try { if (scanner && scanner.isScanning) await scanner.stop(); } catch (e) {} }
+  async function lookupCode(code) {
+    if (S.codes && S.codes[code]) return S.codes[code];
+    if (ONLINE) {
+      try { const res = await fetchMigros(code); const m = res.find(r => r.name);
+        if (m) return { label: migrosLabel(m), image: m.image, migros_id: m.id, category: classify(m.category || "") || classify(m.name) }; } catch (e) {}
+    }
+    try {
+      const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name_fr,product_name,brands,image_front_small_url`);
+      const p = (await r.json()).product;
+      const name = p && (p.product_name_fr || p.product_name);
+      if (name) { const brand = (p.brands || "").split(",")[0].trim();
+        return { label: (brand && !norm(name).includes(norm(brand)) ? brand + " " : "") + name, image: p.image_front_small_url || null }; }
+    } catch (e) {}
+    return null;
+  }
+  async function onCode(code) {
+    if (scanBusy) return; scanBusy = true;
+    $("scan-msg").textContent = `Code ${code}, recherche…`;
+    await stopScan();
+    const p = await lookupCode(code);
+    scanBusy = false;
+    if (!p) { $("scan-msg").textContent = `Produit inconnu (${code}). Tape son nom à la main.`; return; }
+    // on montre le produit trouvé avant de l'ajouter : la recherche par code peut se tromper
+    $("scan-msg").innerHTML = `<span class="found">${p.image ? imgTag(p.image) : ""}<b>${esc(p.label)}</b></span>
+      <span class="row gap"><button type="button" id="scan-add">Ajouter</button><button type="button" id="scan-again" class="ghost">Autre scan</button></span>`;
+    $("scan-add").onclick = () => {
+      S.codes = S.codes || {}; S.codes[code] = p; save();
+      $("d-scan").close();
+      addFromText(p.label, { image: p.image, migros_id: p.migros_id || null, category: p.category || null });
+    };
+    $("scan-again").onclick = () => $("b-scan").onclick();
+  }
+  $("b-scan").onclick = async () => {
+    await stopScan(); scanBusy = false;
+    $("scan-msg").textContent = "Vise le code-barres de l'emballage."; if (!$("d-scan").open) $("d-scan").showModal();
+    try {
+      if (!window.Html5Qrcode) await loadScript("vendor/html5-qrcode.min.js?v=1");
+      const F = window.Html5QrcodeSupportedFormats;
+      scanner = scanner || new Html5Qrcode("scan-view", { verbose: false,
+        formatsToSupport: [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E], experimentalFeatures: { useBarCodeDetectorIfSupported: true } });
+      await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 260, height: 120 } }, code => onCode(code), () => {});
+    } catch (e) {
+      $("scan-msg").textContent = "Caméra indisponible. Autorise-la dans Réglages > Safari > Caméra.";
+    }
+  };
+  $("scan-close").onclick = () => $("d-scan").close();
+  $("d-scan").addEventListener("close", stopScan);
+
   $("f-add").addEventListener("submit", e => {
     e.preventDefault(); const v = $("new").value.trim(); if (!v) return;
     addFromText(v); $("new").value = ""; renderSugg();

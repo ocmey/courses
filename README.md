@@ -10,6 +10,8 @@ Liste de courses partagée pour 4 iPhone, triée par rayon dans l'ordre de chaqu
 - Vue « En magasin » : choix du magasin, rayons dans l'ordre de ce magasin, gros boutons, les articles cochés descendent.
 - « Rayons » : tu règles l'ordre avec les flèches, une fois par magasin.
 - Magasins situés d'office (OpenStreetMap, une fois au premier lancement ; liste et adresses dans le menu ⋯). Le bouton flèche te situe, choisit le magasin le plus proche et indique sa distance. Le mode « En magasin » choisit aussi tout seul le magasin à moins de 250 m.
+- Scanner de code-barres (bouton à gauche du champ) : cherche le produit sur migros.ch puis Open Food Facts, montre ce qu'il a trouvé avant d'ajouter.
+- Photo prise avec le téléphone pour un article sans photo (touche l'article > 📷 Photo).
 - Fonctionne sans réseau, puis se resynchronise.
 - Chaque coche en magasin est enregistrée, pour apprendre l'ordre automatiquement en V2.
 
@@ -44,6 +46,7 @@ Mode « En magasin » > vérifie le magasin choisi > « Rayons », et mets les r
 
 ## Fichiers
 - `index.html`, `style.css`, `app.js` : l'app.
+- `vendor/html5-qrcode.min.js` : lecteur de code-barres (licence Apache 2.0), chargé au premier scan.
 - `categories.js` : les rayons, les deux magasins et le dictionnaire de base (environ 300 mots, dont les marques Migros courantes).
 - `config.js` : les deux valeurs Supabase.
 - `sw.js`, `manifest.webmanifest`, icônes : installation sur l'écran d'accueil et mode hors ligne.

@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <div id="app">
@@ -64,6 +64,7 @@
     <form id="f-add" class="addbar">
       <div id="sugg" class="sugg" aria-label="Suggestions"></div>
       <div class="row">
+        <button type="button" id="b-scan" class="scan" aria-label="Scanner un code-barres"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 5h2v14H3zM6 5h1v14H6zM9 5h2v14H9zM12 5h1v14h-1zM15 5h1v14h-1zM17 5h2v14h-2zM20 5h1v14h-1z" fill="currentColor"/></svg></button>
         <input id="new" placeholder="Ajouter… ex. 2 l lait" autocomplete="off" autocorrect="off" enterkeyhint="done">
         <button type="submit" aria-label="Ajouter">+</button>
       </div>
@@ -88,6 +89,16 @@
       <button type="submit" id="it-save">Enregistrer</button>
     </div>
   </form>
+</dialog>
+
+<!-- Scanner de code-barres -->
+<dialog id="d-scan">
+  <div class="stack">
+    <h2>Scanner un code-barres</h2>
+    <div id="scan-view" class="scanview"></div>
+    <div id="scan-msg" class="muted">Vise le code-barres de l'emballage.</div>
+    <div class="row gap"><span class="grow"></span><button type="button" id="scan-close" class="ghost">Fermer</button></div>
+  </div>
 </dialog>
 
 <!-- Ordre des rayons -->
@@ -115,9 +126,9 @@
 
 <div id="toast" class="toast" role="status"></div>
 
-<script src="config.js?v=19"></script>
-<script src="categories.js?v=19"></script>
+<script src="config.js?v=20"></script>
+<script src="categories.js?v=20"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
