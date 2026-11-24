@@ -321,13 +321,18 @@
   // de la bonne enseigne le plus proche du quartier (ou dont la rue porte le nom, ex. Béthusy).
   const OSM_V = 1;
   async function locateStores() {
-    if (!ONLINE || !navigator.onLine || S.osmV === OSM_V) return;
+    if (!ONLINE || !navigator.onLine || S.osmV === OSM_V) return true;
     const q = `[out:json][timeout:25];(nwr["shop"~"supermarket|convenience"]["name"~"Migros|Coop|Denner",i](46.49,6.58,46.60,6.87);
       nwr["shop"~"supermarket|convenience"]["brand"~"Migros|Coop|Denner",i](46.49,6.58,46.60,6.87););out center tags;`;
+    let els = null;
+    for (const url of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
+      try {
+        const r = await fetch(url, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "content-type": "application/x-www-form-urlencoded" } });
+        if (r.ok) { els = (await r.json()).elements || []; break; }
+      } catch (e) { console.warn("OpenStreetMap :", url, e); }
+    }
+    if (!els || !els.length) return false;
     try {
-      const r = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q),
-        headers: { "content-type": "application/x-www-form-urlencoded" } });
-      const els = (await r.json()).elements || [];
       const shops = els.map(e => { const t = e.tags || {};
         return { lat: e.lat ?? e.center?.lat, lng: e.lon ?? e.center?.lon, t, label: norm(`${t.brand || ""} ${t.name || ""}`),
           addr: [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") + (t["addr:city"] ? `, ${t["addr:city"]}` : "") };
@@ -343,13 +348,16 @@
           .map(x => ({ x, k: shops.indexOf(x), d: dist({ lat: st.a[0], lng: st.a[1] }, x),
             named: norm(`${x.addr} ${x.t.name || ""} ${x.t.branch || ""}`).includes(hint) }))
           .filter(c => c.d < 1500).sort((a, b) => (b.named - a.named) || (a.d - b.d));
-        if (!cands.length) continue;
+        if (!cands.length) { // pas trouvé : on efface une éventuelle position enregistrée à la main par erreur
+          if (S.pos[st.id]) { delete S.pos[st.id]; delete S.posInfo[st.id]; if (S.family && S.family.id !== "demo") pushStore(st.id); }
+          continue;
+        }
         const c = cands[0]; used.add(c.k);
         S.pos[st.id] = { lat: c.x.lat, lng: c.x.lng }; S.posInfo[st.id] = c.x.addr || c.x.t.name || "";
         if (S.family && S.family.id !== "demo") pushStore(st.id);
       }
-      S.osmV = OSM_V; save();
-    } catch (e) { console.warn("OpenStreetMap :", e); }
+      S.osmV = OSM_V; save(); return true;
+    } catch (e) { console.warn("OpenStreetMap :", e); return false; }
   }
 
   // Bouton « me situer » : choisit le magasin le plus proche et dit à quelle distance il est.
@@ -357,12 +365,13 @@
     toast("Localisation…");
     try {
       const me = await here();
-      if (!Object.keys(S.pos).length) await locateStores();
+      const osmOk = await locateStores();
       const near = STORES.filter(s => S.pos[s.id]).map(s => ({ s, d: dist(me, S.pos[s.id]) })).sort((a, b) => a.d - b.d)[0];
-      if (!near) return toast("Les magasins ne sont pas encore situés. Réessaie avec du réseau.");
+      if (!near) return toast("Les magasins ne sont pas encore situés (OpenStreetMap ne répond pas). Réessaie plus tard.");
       if (near.s.id !== S.store) { S.store = near.s.id; save(); render(); }
       const d = near.d < 1000 ? `${Math.round(near.d / 10) * 10} m` : `${(near.d / 1000).toFixed(1).replace(".", ",")} km`;
-      toast(near.d < 250 ? `Tu es à ${near.s.n}` : `Le plus proche : ${near.s.n}, à ${d}`);
+      toast((near.d < 250 ? `Tu es à ${near.s.n}` : `Le plus proche : ${near.s.n}, à ${d}`)
+        + (osmOk ? "" : " (attention : positions des magasins pas encore vérifiées sur OpenStreetMap)"), null, null, osmOk ? 3000 : 6000);
     } catch (e) { toast("Localisation refusée. Autorise-la dans Réglages > Safari > Position."); }
   };
 
