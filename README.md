@@ -9,7 +9,7 @@ Liste de courses partagée pour 4 iPhone, triée par rayon dans l'ordre de chaqu
 - Classement automatique par rayon. Si un article tombe mal ou dans « À classer », tu choisis le rayon une fois et l'app le retient pour toute la famille.
 - Vue « En magasin » : choix du magasin, rayons dans l'ordre de ce magasin, gros boutons, les articles cochés descendent.
 - « Rayons » : tu règles l'ordre avec les flèches, une fois par magasin.
-- Détection du magasin : la première fois sur place, appuie sur 📍 pour enregistrer sa position. Ensuite, en passant en mode magasin, l'app choisit le plus proche (à moins de 250 m). Ça ne marche que l'app ouverte, et le GPS est parfois imprécis à l'intérieur : vérifie le nom en haut.
+- Détection du magasin : 📍 te situe et choisit le magasin connu le plus proche. Si aucun n'est connu à cet endroit, l'app propose « Enregistrer ici » pour le magasin affiché (la première fois sur place). Ensuite, en passant en mode magasin, l'app choisit le plus proche (à moins de 250 m). Ça ne marche que l'app ouverte, et le GPS est parfois imprécis à l'intérieur : vérifie le nom en haut.
 - Fonctionne sans réseau, puis se resynchronise.
 - Chaque coche en magasin est enregistrée, pour apprendre l'ordre automatiquement en V2.
 
@@ -35,7 +35,7 @@ Sans configuration (config.js vide), l'app tourne en mode démo, sur un seul té
 3. Les 3 autres : leur e-mail, leur mot de passe, « Créer mon compte », leur prénom et ce code.
 
 **4. Au premier passage dans chaque magasin**
-Mode « En magasin » > choisis le magasin > 📍 pour enregistrer sa position > « Rayons », et mets les rayons dans l'ordre où tu passes devant. À faire une fois pour chacun des 9 magasins.
+Mode « En magasin » > choisis le magasin > 📍 puis « Enregistrer ici » > « Rayons », et mets les rayons dans l'ordre où tu passes devant. À faire une fois pour chacun des 9 magasins.
 
 ## À savoir
 - Supabase gratuit met le projet en pause après 7 jours sans aucune activité (vacances, par exemple). Il se réactive en un clic depuis le tableau de bord, les données restent.
