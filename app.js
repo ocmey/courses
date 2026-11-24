@@ -332,7 +332,7 @@
     try {
       const shops = els.map(e => { const t = e.tags || {};
         return { lat: e.lat ?? e.center?.lat, lng: e.lon ?? e.center?.lon, t, label: norm(`${t.brand || ""} ${t.name || ""}`),
-          addr: [t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" ") + (t["addr:city"] ? `, ${t["addr:city"]}` : "") };
+          addr: [[t["addr:street"], t["addr:housenumber"]].filter(Boolean).join(" "), t["addr:city"]].filter(Boolean).join(", ") };
       }).filter(x => x.lat && !/migrolino|pronto|vitality|partenaire|partner|satellit|take ?it|to go/.test(x.label));
       const used = new Set(); S.posInfo = S.posInfo || {};
       // les magasins avec un nom de rue (Béthusy, Valonnette) d'abord, pour qu'ils ne se volent pas leur Denner
@@ -552,8 +552,9 @@
   // ---------- Réglages ----------
   $("b-menu").onclick = () => {
     $("menu-family").textContent = S.family ? `${S.family.name}. Code à partager avec la famille : ${S.family.code}` : "";
-    $("menu-stores").innerHTML = STORES.map(st => `<li><b>${esc(st.n)}</b> : ${S.pos[st.id]
-      ? esc((S.posInfo || {})[st.id] || "position enregistrée") : "pas encore situé"}</li>`).join("");
+    // chaque magasin ouvre Plans à sa position, pour vérifier d'un coup d'œil
+    $("menu-stores").innerHTML = STORES.map(st => { const p = S.pos[st.id];
+      return `<li><b>${esc(st.n)}</b> : ${p ? `<a href="https://maps.apple.com/?ll=${p.lat},${p.lng}&q=${encodeURIComponent(st.n)}" target="_blank" rel="noopener">${esc((S.posInfo || {})[st.id] || "voir sur le plan")}</a>` : "pas encore situé"}</li>`; }).join("");
     $("b-logout").hidden = !ONLINE;
     $("d-menu").showModal();
   };
