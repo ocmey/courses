@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="stylesheet" href="style.css?v=26">
+<link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <div id="app">
@@ -50,11 +50,7 @@
         <span id="sync" class="sync" title="État de la synchronisation"></span>
         <button id="b-menu" class="icon" aria-label="Réglages">⋯</button>
       </div>
-      <div class="seg" role="group" aria-label="Mode">
-        <button id="m-list" aria-pressed="true">Liste</button>
-        <button id="m-store" aria-pressed="false">En magasin</button>
-      </div>
-      <div id="store-row" class="row" hidden>
+      <div id="store-row" class="row">
         <select id="store" aria-label="Magasin"></select>
         <button id="b-here" class="ghost loc" aria-label="Me situer" title="Me situer"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M21 3 3 10.5l7.5 2.9L13.4 21z" fill="currentColor"/></svg></button>
         <button id="b-order" class="ghost">Rayons</button>
@@ -126,9 +122,9 @@
 
 <div id="toast" class="toast" role="status"></div>
 
-<script src="config.js?v=26"></script>
-<script src="categories.js?v=26"></script>
+<script src="config.js?v=27"></script>
+<script src="categories.js?v=27"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
-<script src="app.js?v=26"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>

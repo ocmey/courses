@@ -11,7 +11,7 @@
   let sb = null, channel = null;
 
   // ---------- État local ----------
-  const defaults = () => ({ items: {}, dict: {}, order: {}, pos: {}, known: {}, queue: [], me: null, family: null, store: STORES[0].id, mode: "list" });
+  const defaults = () => ({ items: {}, dict: {}, order: {}, pos: {}, known: {}, queue: [], me: null, family: null, store: STORES[0].id, mode: "store" });
   let S = (() => { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) return Object.assign(defaults(), s); } catch (e) {} return defaults(); })();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 
@@ -419,9 +419,9 @@
     return `<div class="row-wrap"><div class="del-bg" aria-hidden="true">Supprimer</div><div class="item${i.done ? " done" : ""}" data-id="${i.id}">
       <button class="chk" data-act="toggle" aria-label="${i.done ? "Décocher" : "Cocher"} ${esc(i.name)}"></button>
       ${i.image ? imgTag(i.image, "thumb") : ""}
-      <div class="body" data-act="${store ? "toggle" : "edit"}">
+      <div class="body" data-act="edit">
         <span class="name">${esc(i.name)}</span>${i.qty ? `<span class="qty">${esc(i.qty)}</span>` : ""}
-        ${!store && i.added_by ? `<span class="who">${esc(i.added_by)}</span>` : ""}
+        ${i.added_by ? `<span class="who">${esc(i.added_by)}</span>` : ""}
       </div></div></div>`;
   }
 
@@ -430,9 +430,6 @@
     const store = S.mode === "store";
     const L = $("list");
     L.classList.toggle("store", store);
-    $("store-row").hidden = !store;
-    $("m-list").setAttribute("aria-pressed", !store);
-    $("m-store").setAttribute("aria-pressed", store);
     $("store").value = S.store;
     setSync();
     const items = Object.values(S.items).sort((a, b) => (a.created_at || "") < (b.created_at || "") ? -1 : 1);
@@ -712,9 +709,8 @@
     addFromText((typed.qty ? typed.qty + " " : "") + b.dataset.s, extra);
     $("new").value = ""; $("new").focus(); renderSugg();
   });
-  $("m-list").onclick = () => { S.mode = "list"; save(); render(); stopWatch(); };
-  $("m-store").onclick = () => { S.mode = "store"; save(); render(); detectStore(); startWatch(); };
-  if (S.mode === "store") startWatch();
+  // Une seule vue (souhait d'Olivier) : toujours triée dans l'ordre du magasin choisi.
+  S.mode = "store"; startWatch(); detectStore();
   $("store").innerHTML = [...new Set(STORES.map(s => s.g))].map(g => `<optgroup label="${esc(g)}">` +
     STORES.filter(s => s.g === g).map(s => `<option value="${s.id}">${esc(s.n)}</option>`).join("") + `</optgroup>`).join("");
   $("store").onchange = e => { S.store = e.target.value; save(); render(); };
