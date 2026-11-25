@@ -286,16 +286,22 @@
   const offCache = {};
   async function searchOFF(q) {
     const key = norm(q); if (offCache[key]) return offCache[key];
-    try {
-      const u = "https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=8"
-        + "&tagtype_0=countries&tag_contains_0=contains&tag_0=switzerland"
-        + "&fields=code,product_name_fr,product_name,brands,image_front_small_url&search_terms=" + encodeURIComponent(key);
-      const j = await (await fetch(u)).json();
-      const out = (j.products || []).map(p => ({ id: "off:" + p.code, name: p.product_name_fr || p.product_name || "",
-        brand: (p.brands || "").split(",")[0].trim() || null, image: p.image_front_small_url || null, category: "", src: "OFF" }))
-        .filter(p => p.name && prefixMatch(`${p.brand || ""} ${p.name}`, q));
-      return (offCache[key] = out);
-    } catch (e) { console.warn("Open Food Facts :", e); return []; }
+    const F = "code,product_name_fr,product_name,brands,image_front_small_url,countries_tags";
+    const map = p => ({ id: "off:" + p.code, name: p.product_name_fr || p.product_name || "",
+      brand: (Array.isArray(p.brands) ? p.brands[0] : String(p.brands || "").split(",")[0]).trim() || null,
+      image: p.image_front_small_url || null, category: "", src: "OFF", ch: String(p.countries_tags || "").includes("switzerland") });
+    let list = [];
+    try { // nouveau moteur de recherche d'Open Food Facts (rapide)
+      const j = await (await fetch(`https://search.openfoodfacts.org/search?page_size=20&langs=fr&fields=${F}&q=${encodeURIComponent(key)}`)).json();
+      list = (j.hits || []).map(map);
+    } catch (e) { console.warn("OFF search :", e); }
+    if (!list.length) try { // ancien moteur, plus lent
+      const j = await (await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=20&fields=${F}&search_terms=${encodeURIComponent(key)}`)).json();
+      list = (j.products || []).map(map);
+    } catch (e) { console.warn("OFF search.pl :", e); }
+    // produits vendus en Suisse d'abord, et seulement ceux qui contiennent les mots tapés
+    const out = list.filter(p => p.name && prefixMatch(`${p.brand || ""} ${p.name}`, q)).sort((a, b) => b.ch - a.ch).slice(0, 6);
+    return (offCache[key] = out);
   }
   function queueMigros(q) {
     clearTimeout(migrosTimer);
