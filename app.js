@@ -288,7 +288,7 @@
     const key = norm(q); if (offCache[key]) return offCache[key];
     const F = "code,product_name_fr,product_name,brands,image_front_small_url,countries_tags";
     const map = p => ({ id: "off:" + p.code, name: p.product_name_fr || p.product_name || "",
-      brand: (Array.isArray(p.brands) ? p.brands[0] : String(p.brands || "").split(",")[0]).trim() || null,
+      brand: String(Array.isArray(p.brands) ? p.brands[0] || "" : String(p.brands || "").split(",")[0]).replace(/^[a-z]{2}:/, "").trim() || null,
       image: p.image_front_small_url || null, category: "", src: "OFF", ch: String(p.countries_tags || "").includes("switzerland") });
     let list = [];
     try { // nouveau moteur de recherche d'Open Food Facts (rapide)
