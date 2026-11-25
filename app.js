@@ -562,16 +562,41 @@
   function renderOrder() {
     const o = storeOrder(S.store);
     $("order-title").textContent = "Ordre des rayons, " + (STORES.find(s => s.id === S.store) || {}).n;
-    $("order-list").innerHTML = o.map((id, k) => `<li><span class="k">${k + 1}</span><span>${esc(catById(id).n)}</span>
-      <button type="button" data-mv="-1" data-k="${k}" aria-label="Monter" ${k === 0 ? "disabled" : ""}>↑</button>
-      <button type="button" data-mv="1" data-k="${k}" aria-label="Descendre" ${k === o.length - 1 ? "disabled" : ""}>↓</button></li>`).join("");
+    $("order-list").innerHTML = o.map((id, k) => `<li data-id="${id}"><span class="k">${k + 1}</span><span class="t">${esc(catById(id).n)}</span>
+      <span class="grip" aria-label="Déplacer ${esc(catById(id).n)}">≡</span></li>`).join("");
   }
-  $("order-list").addEventListener("click", e => {
-    const b = e.target.closest("button[data-mv]"); if (!b) return;
-    const o = storeOrder(S.store), k = +b.dataset.k, j = k + (+b.dataset.mv);
-    if (j < 0 || j >= o.length) return;
-    [o[k], o[j]] = [o[j], o[k]]; setOrder(o); renderOrder(); render();
+  // Glisser-déposer avec la poignée ≡ (événements « pointer » : le glisser HTML5 ne marche pas au doigt sur iPhone).
+  // Seule la poignée bloque le défilement, le reste de la liste défile normalement.
+  let drag = null;
+  $("order-list").addEventListener("pointerdown", e => {
+    const g = e.target.closest(".grip"); if (!g) return;
+    e.preventDefault();
+    const li = g.closest("li"), r = li.getBoundingClientRect();
+    drag = { li, y0: e.clientY, top0: r.top, id: e.pointerId };
+    li.classList.add("dragging"); g.setPointerCapture(e.pointerId);
   });
+  $("order-list").addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const L = $("order-list"), li = drag.li;
+    // on échange avec le voisin dès que le doigt passe sa moitié
+    const prev = li.previousElementSibling, next = li.nextElementSibling;
+    const mid = el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+    if (next && e.clientY > mid(next)) { L.insertBefore(next, li); }
+    else if (prev && e.clientY < mid(prev)) { L.insertBefore(li, prev); }
+    li.style.transform = ""; const r = li.getBoundingClientRect();
+    li.style.transform = `translateY(${e.clientY - drag.y0 - (r.top - drag.top0)}px)`;
+    // défilement automatique près des bords
+    const lr = L.getBoundingClientRect();
+    if (e.clientY < lr.top + 30) L.scrollTop -= 8; else if (e.clientY > lr.bottom - 30) L.scrollTop += 8;
+  });
+  const endDrag = e => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    drag.li.classList.remove("dragging"); drag.li.style.transform = ""; drag = null;
+    const o = [...$("order-list").children].map(li => li.dataset.id);
+    setOrder(o); renderOrder(); render();
+  };
+  $("order-list").addEventListener("pointerup", endDrag);
+  $("order-list").addEventListener("pointercancel", endDrag);
   $("b-order").onclick = () => { renderOrder(); $("d-order").showModal(); };
   $("order-done").onclick = () => $("d-order").close();
 

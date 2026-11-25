@@ -82,11 +82,14 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 
 dialog { border: 0; border-radius: 16px; padding: 20px; width: min(92vw, 420px); background: var(--bg); color: var(--ink); }
 dialog::backdrop { background: rgba(0,0,0,.35); }
-.order { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; max-height: 55vh; overflow-y: auto; }
-.order li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--soft); border-radius: 8px; font-size: 15px; }
-.order li span { flex: 1; }
+.order { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; }
+.order li { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 14px; font-size: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.06); position: relative; transition: box-shadow .15s; }
+.order li .t { flex: 1; }
 .order li .k { color: var(--muted); width: 1.6em; font-variant-numeric: tabular-nums; flex: none; }
-.order li button { padding: 4px 10px; background: var(--bg); color: var(--ink); }
+.order li .grip { flex: none; font-size: 22px; line-height: 1; color: var(--muted); padding: 6px 4px 6px 12px; cursor: grab;
+  touch-action: none; -webkit-user-select: none; user-select: none; }
+.order li.dragging { z-index: 2; box-shadow: 0 8px 24px rgba(0,0,0,.18); border-color: var(--accent); }
 .toast { position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 120px); background: var(--ink); color: var(--bg);
   border-radius: 10px; padding: 10px 14px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; text-align: center; }
 .toast.on { opacity: 1; }

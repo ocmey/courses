@@ -8,7 +8,7 @@ Liste de courses partagée pour 4 iPhone, triée par rayon dans l'ordre de chaqu
 - Produits migros.ch dans les suggestions (vrais noms, marques, photo), dès 3 lettres tapées. Si Migros bloque ou change son site, l'app continue sans.
 - Classement automatique par rayon. Si un article tombe mal ou dans « À classer », tu choisis le rayon une fois et l'app le retient pour toute la famille.
 - Une seule vue : choix du magasin en haut, rayons dans l'ordre de ce magasin, les articles cochés descendent. Toucher le nom d'un article ouvre sa fiche.
-- « Rayons » : tu règles l'ordre avec les flèches, une fois par magasin.
+- « Rayons » : tu règles l'ordre en glissant la poignée ≡, une fois par magasin.
 - Magasins situés d'office à partir de leurs adresses (categories.js, converties en GPS par geo.admin.ch au premier lancement ; liste dans le menu ⋯, chaque adresse s'ouvre dans Plans). Migros Chailly et Denner Valonnette sont dans le même bâtiment : la flèche propose de passer de l'un à l'autre. Le bouton flèche te situe, choisit le magasin le plus proche et indique sa distance. Le mode « En magasin » choisit aussi tout seul le magasin à moins de 250 m.
 - Retirer un article des suggestions : appui long sur la suggestion, puis « Retirer ». Un article supprimé (glisser) sans avoir été acheté et ajouté une seule fois est retiré automatiquement.
 - Scanner de code-barres (bouton à gauche du champ) : cherche le produit sur migros.ch puis Open Food Facts, montre ce qu'il a trouvé avant d'ajouter.
