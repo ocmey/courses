@@ -1,6 +1,6 @@
 // Garde l'app disponible hors ligne (sous-sols de magasins sans réseau).
 // Change VERSION à chaque mise à jour pour forcer le rechargement.
-const VERSION = "courses-v28";
+const VERSION = "courses-v29";
 const SHELL = ["./", "index.html", "style.css", "app.js", "categories.js", "config.js", "manifest.webmanifest", "icon.svg",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"];
 
