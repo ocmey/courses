@@ -281,13 +281,35 @@
     const list = j.products || []; addToPool(list);
     return (migrosCache[key] = list);
   }
+  // Open Food Facts, recherche texte limitée aux produits vendus en Suisse.
+  // Leur service limite les recherches (environ 10 par minute) : appelé seulement si Migros n'a rien, et gardé en mémoire.
+  const offCache = {};
+  async function searchOFF(q) {
+    const key = norm(q); if (offCache[key]) return offCache[key];
+    try {
+      const u = "https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=8"
+        + "&tagtype_0=countries&tag_contains_0=contains&tag_0=switzerland"
+        + "&fields=code,product_name_fr,product_name,brands,image_front_small_url&search_terms=" + encodeURIComponent(key);
+      const j = await (await fetch(u)).json();
+      const out = (j.products || []).map(p => ({ id: "off:" + p.code, name: p.product_name_fr || p.product_name || "",
+        brand: (p.brands || "").split(",")[0].trim() || null, image: p.image_front_small_url || null, category: "", src: "OFF" }))
+        .filter(p => p.name && prefixMatch(`${p.brand || ""} ${p.name}`, q));
+      return (offCache[key] = out);
+    } catch (e) { console.warn("Open Food Facts :", e); return []; }
+  }
   function queueMigros(q) {
     clearTimeout(migrosTimer);
     if (!ONLINE || migrosOff || !navigator.onLine || norm(q).length < 3) return;
     migrosTimer = setTimeout(async () => {
       try {
-        const res = await searchMigros(q);
+        let res = await searchMigros(q);
         if (parse($("new").value).name !== q) return; // l'utilisateur a continué à taper
+        // Rien de pertinent chez Migros : Open Food Facts en dernier recours (Coop et Denner pas encore branchés)
+        if (!res.some(m => prefixMatch(`${m.brand || ""} ${m.name}`, q)) && norm(q).length >= 4) {
+          const off = await searchOFF(q);
+          if (parse($("new").value).name !== q) return;
+          if (off.length) res = off;
+        }
         renderSugg(res);
       } catch (e) { console.warn(e); }
     }, 450);
@@ -311,7 +333,7 @@
     migrosShown = Array.isArray(migrosRes) ? migrosRes.filter(m => !taken.has(norm(migrosLabel(m)))).slice(0, 6) : [];
     $("sugg").innerHTML = (list.length && !q ? `<span class="lbl">Habituels</span>` : "") + list.map((s, k) =>
       `<button type="button" class="${s.hist ? "hist" : ""}${s.image ? " mig" : ""}" data-l="${k}" data-s="${esc(s.label)}">${s.image ? imgTag(s.image) : ""}${esc(s.label)}${s.qty && !typed.qty ? `<small>${esc(s.qty)}</small>` : ""}</button>`).join("")
-      + migrosShown.map((m, k) => `<button type="button" class="mig" data-m="${k}" data-s="${esc(migrosLabel(m))}">${m.image ? imgTag(m.image) : ""}${esc(migrosLabel(m))}${m.size ? `<small>${esc(m.size)}</small>` : ""}</button>`).join("");
+      + migrosShown.map((m, k) => `<button type="button" class="mig" data-m="${k}" data-s="${esc(migrosLabel(m))}">${m.image ? imgTag(m.image) : ""}${esc(migrosLabel(m))}${m.size ? `<small>${esc(m.size)}</small>` : m.src ? `<small>${m.src}</small>` : ""}</button>`).join("");
     if (!Array.isArray(migrosRes)) queueMigros(q);
   }
 
