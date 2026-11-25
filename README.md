@@ -14,7 +14,7 @@ Liste de courses partagée pour 4 iPhone, triée par rayon dans l'ordre de chaqu
 - Scanner de code-barres (bouton à gauche du champ) : cherche le produit sur migros.ch puis Open Food Facts, montre ce qu'il a trouvé avant d'ajouter.
 - Photo prise avec le téléphone pour un article sans photo (touche l'article > 📷 Photo).
 - Fonctionne sans réseau, puis se resynchronise.
-- Chaque coche en magasin est enregistrée, pour apprendre l'ordre automatiquement en V2.
+- Les coches en magasin servent à apprendre l'ordre des rayons (V2), mais seulement si le GPS confirme qu'on est dans le magasin (50 m, précision 40 m) et qu'il y a au moins 3 coches dans la visite. Cocher depuis le bureau ou la maison ne compte pas.
 
 Sans configuration (config.js vide), l'app tourne en mode démo, sur un seul téléphone.
 

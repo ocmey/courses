@@ -149,10 +149,37 @@
     i.done = !i.done;
     if (i.done) {
       i.done_by = S.me ? S.me.name : null; i.done_at = now(); i.done_store = S.mode === "store" ? S.store : null;
-      if (S.mode === "store") enqueue({ op: "upsert", table: "check_log", row: { id: uuid(), family_id: S.family.id, store: S.store, category: i.category, item_name: i.name, checked_by: i.done_by, checked_at: i.done_at } });
-    } else { i.done_by = null; i.done_at = null; i.done_store = null; }
+      if (S.mode === "store") logCheck(i);
+    } else { unlogCheck(i); i.done_by = null; i.done_at = null; i.done_store = null; }
     saveItem(i);
   }
+  // ---------- Coches qui comptent pour l'apprentissage de l'ordre des rayons ----------
+  // Une coche n'entre dans le journal (check_log) que si on est vraiment dans le magasin choisi :
+  // une position GPS à 50 m au plus, avec une précision de 40 m ou mieux, pendant la visite,
+  // et au moins 3 coches dans cette visite. Le bureau d'Olivier est à moins de 100 m de Chailly Center.
+  // Sinon les coches restent sur le téléphone et sont oubliées après 20 minutes sans coche.
+  const NEAR_M = 50, ACC_M = 40, MIN_CHECKS = 3, VISIT_MS = 20 * 60e3;
+  let watchId = null, lastFix = null;
+  function startWatch() {
+    if (watchId != null || !navigator.geolocation) return;
+    watchId = navigator.geolocation.watchPosition(p => { lastFix = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, at: Date.now() }; },
+      () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
+  }
+  function stopWatch() { if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null; }
+  const inStore = () => { const p = S.pos[S.store];
+    return !!(p && lastFix && Date.now() - lastFix.at < 120e3 && lastFix.acc <= ACC_M && dist(lastFix, p) <= NEAR_M); };
+  function logCheck(i) {
+    const v0 = S.visit;
+    const v = S.visit = v0 && v0.store === S.store && Date.now() - v0.last < VISIT_MS ? v0 : { store: S.store, rows: [], near: false, ok: false, last: 0 };
+    v.last = Date.now(); if (inStore()) v.near = true;
+    v.rows.push({ id: uuid(), family_id: S.family.id, store: S.store, category: i.category, item_name: i.name, checked_by: i.done_by, checked_at: i.done_at });
+    if (v.near && (v.ok || v.rows.length >= MIN_CHECKS)) { // visite confirmée : on envoie
+      v.ok = true; v.rows.forEach(row => enqueue({ op: "upsert", table: "check_log", row })); v.rows = [];
+    }
+    save();
+  }
+  function unlogCheck(i) { if (S.visit) S.visit.rows = S.visit.rows.filter(r => !(r.item_name === i.name && r.checked_at === i.done_at)); }
+
   function addFromText(v, extra) {
     const p = parse(v); if (!p.name) return;
     const ex = Object.values(S.items).find(i => !i.done && norm(i.name) === norm(p.name));
@@ -301,7 +328,8 @@
     const h = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
   const here = () => new Promise((ok, ko) => {
     if (!navigator.geolocation) return ko(new Error("Pas de localisation sur cet appareil"));
-    navigator.geolocation.getCurrentPosition(p => ok({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }), ko,
+    navigator.geolocation.getCurrentPosition(p => { const f = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+      lastFix = { ...f, at: Date.now() }; ok(f); }, ko,
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
   });
   async function detectStore() {
@@ -684,8 +712,9 @@
     addFromText((typed.qty ? typed.qty + " " : "") + b.dataset.s, extra);
     $("new").value = ""; $("new").focus(); renderSugg();
   });
-  $("m-list").onclick = () => { S.mode = "list"; save(); render(); };
-  $("m-store").onclick = () => { S.mode = "store"; save(); render(); detectStore(); };
+  $("m-list").onclick = () => { S.mode = "list"; save(); render(); stopWatch(); };
+  $("m-store").onclick = () => { S.mode = "store"; save(); render(); detectStore(); startWatch(); };
+  if (S.mode === "store") startWatch();
   $("store").innerHTML = [...new Set(STORES.map(s => s.g))].map(g => `<optgroup label="${esc(g)}">` +
     STORES.filter(s => s.g === g).map(s => `<option value="${s.id}">${esc(s.n)}</option>`).join("") + `</optgroup>`).join("");
   $("store").onchange = e => { S.store = e.target.value; save(); render(); };
@@ -693,7 +722,8 @@
   window.addEventListener("online", () => { flush(); pull(); });
   window.addEventListener("offline", setSync);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && S.mode === "store") detectStore();
+    if (document.visibilityState === "visible" && S.mode === "store") { detectStore(); startWatch(); }
+    if (document.visibilityState === "hidden") stopWatch();
     if (document.visibilityState === "visible" && ONLINE && S.family) { flush(); pull(); subscribe(); }
   });
 
