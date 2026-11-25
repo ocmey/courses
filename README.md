@@ -5,7 +5,7 @@ Liste de courses partagée pour 4 iPhone, triée par rayon dans l'ordre de chaqu
 ## Ce que fait la V1
 - Ajout en tapant, avec la quantité : « 2 l lait », « 500 g de gruyère ».
 - Suggestions pendant la saisie : d'abord les articles déjà achetés par la famille (avec leur quantité habituelle), puis un catalogue d'environ 190 articles courants. Champ vide = les « habituels » qui ne sont pas encore sur la liste.
-- Produits migros.ch dans les suggestions (noms exacts du site, photo), dès 3 lettres. Si Migros n'a rien, Open Food Facts (produits vendus en Suisse) en dernier recours, marqué « OFF ». Coop et Denner : pas encore.
+- Produits migros.ch dans les suggestions (noms exacts du site, photo), dès 3 lettres. Si Migros a peu de résultats, Open Food Facts complète après Migros, marqué « OFF ». Coop et Denner : pas encore.
 - Classement automatique par rayon. Si un article tombe mal ou dans « À classer », tu choisis le rayon une fois et l'app le retient pour toute la famille.
 - Une seule vue : choix du magasin en haut, rayons dans l'ordre de ce magasin, les articles cochés descendent. Toucher le nom d'un article ouvre sa fiche.
 - « Rayons » : tu règles l'ordre en glissant la poignée ≡, une fois par magasin.

@@ -310,11 +310,14 @@
       try {
         let res = await searchMigros(q);
         if (parse($("new").value).name !== q) return; // l'utilisateur a continué à taper
-        // Rien de pertinent chez Migros : Open Food Facts en dernier recours (Coop et Denner pas encore branchés)
-        if (!res.some(m => prefixMatch(`${m.brand || ""} ${m.name}`, q)) && norm(q).length >= 4) {
+        // Peu de résultats Migros : on complète avec Open Food Facts, toujours après Migros
+        // (ex. Swaf : Migros n'a que la version sans alcool). Coop et Denner pas encore branchés.
+        const hits = res.filter(m => prefixMatch(`${m.brand || ""} ${m.name}`, q));
+        if (hits.length < 4 && norm(q).length >= 4) {
           const off = await searchOFF(q);
           if (parse($("new").value).name !== q) return;
-          if (off.length) res = off;
+          const names = new Set(hits.map(m => norm(migrosLabel(m))));
+          res = (hits.length ? hits : res).concat(off.filter(o => !names.has(norm(migrosLabel(o))))).slice(0, 8);
         }
         renderSugg(res);
       } catch (e) { console.warn(e); }
@@ -336,7 +339,7 @@
     list.forEach(s => { if (!s.image) { const m = photoFor(s.label, pool); if (m) { s.image = m.image; s.migros_id = m.id; } } });
     suggShown = list;
     const taken = new Set(list.map(s => norm(s.label)).concat([...onList()]));
-    migrosShown = Array.isArray(migrosRes) ? migrosRes.filter(m => !taken.has(norm(migrosLabel(m)))).slice(0, 6) : [];
+    migrosShown = Array.isArray(migrosRes) ? migrosRes.filter(m => !taken.has(norm(migrosLabel(m)))).slice(0, 8) : [];
     $("sugg").innerHTML = (list.length && !q ? `<span class="lbl">Habituels</span>` : "") + list.map((s, k) =>
       `<button type="button" class="${s.hist ? "hist" : ""}${s.image ? " mig" : ""}" data-l="${k}" data-s="${esc(s.label)}">${s.image ? imgTag(s.image) : ""}${esc(s.label)}${s.qty && !typed.qty ? `<small>${esc(s.qty)}</small>` : ""}</button>`).join("")
       + migrosShown.map((m, k) => `<button type="button" class="mig" data-m="${k}" data-s="${esc(migrosLabel(m))}">${m.image ? imgTag(m.image) : ""}${esc(migrosLabel(m))}${m.size ? `<small>${esc(m.size)}</small>` : m.src ? `<small>${m.src}</small>` : ""}</button>`).join("");
