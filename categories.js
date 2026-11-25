@@ -40,7 +40,7 @@ const D = {
   epicerie: "pate pates spaghetti penne fusilli riz risotto couscous quinoa lentille pois chiche farine sucre sel poivre huile vinaigre moutarde mayonnaise ketchup sauce tomate concentre bouillon epice conserve thon en boite olive cornichon levure maizena",
   dej: "cereale muesli flocon d'avoine confiture miel nutella pate a tartiner cafe capsule delizio the tisane chocolat en poudre ovomaltine cacao",
   snacks: "chocolat frey biscuit chips zweifel cracker noix cacahuete amande noisette fruit sec bonbon chewing-gum farmer barre",
-  boissons: "eau eau minerale aproz eau gazeuse jus sirop limonade coca ice tea biere vin cidre prosecco champagne mousseux whisky vodka gin rhum pastis porto martini aperol spritz chasselas merlot pinot gamay lager ipa feldschlossen cardinal heineken",
+  boissons: "eau eau minerale aproz eau gazeuse jus sirop limonade coca ice tea biere vin cidre prosecco champagne mousseux whisky vodka gin rhum pastis porto martini aperol spritz chasselas merlot pinot gamay lager ipa feldschlosschen cardinal heineken",
   surgeles: "glace surgele frites legumes surgeles epinards surgeles pizza surgelee poisson pane",
   menage: "yvette handymatic potz total lessive adoucissant liquide vaisselle lave-vaisselle tablette lave-vaisselle pastille eponge papier menage essuie-tout sac poubelle sac a poubelle film alimentaire papier alu aluminium detergent nettoyant javel desinfectant serpillere chiffon wc canard anticalcaire",
   hygiene: "dentifrice candida brosse a dents shampoing gel douche savon deodorant creme solaire papier toilette mouchoir coton tige rasoir serviette hygienique tampon i am",
