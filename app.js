@@ -570,9 +570,10 @@
     photoPick = { image: i.image || null, migros_id: i.migros_id || null };
     renderPhotos(i, i.image ? [{ id: i.migros_id, image: i.image }] : []);
     $("d-item").showModal();
-    if (ONLINE && navigator.onLine) fetchMigros(i.name).then(res => {
+    // photos Migros d'abord, puis Open Food Facts (ex. la Swaf normale, absente chez Migros)
+    if (ONLINE && navigator.onLine) Promise.all([fetchMigros(i.name), searchOFF(i.name).catch(() => [])]).then(([res, off]) => {
       if (editing !== id) return;
-      const list = (i.image ? [{ id: i.migros_id, image: i.image }] : []).concat(res.filter(m => m.image && m.image !== i.image));
+      const list = (i.image ? [{ id: i.migros_id, image: i.image }] : []).concat(res.concat(off).filter(m => m.image && m.image !== i.image));
       renderPhotos(i, list);
     }).catch(() => renderPhotos(i, i.image ? [{ id: i.migros_id, image: i.image }] : [], true));
   }
