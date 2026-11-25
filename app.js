@@ -470,7 +470,8 @@
     if (uns.length) {
       h += `<div class="cat"><h3>À classer</h3>` + uns.map(i =>
         `<div class="unsorted"><span><b>${esc(i.name)}</b> : choisis le rayon, l'app s'en souviendra.</span>
-         <select data-fix="${i.id}" aria-label="Rayon pour ${esc(i.name)}"><option value="">Choisir un rayon…</option>${catOptions()}</select></div>`).join("") + `</div>`;
+         <div class="row gap"><select data-fix="${i.id}" aria-label="Rayon pour ${esc(i.name)}"><option value="">Choisir un rayon…</option>${catOptions()}</select>
+         <button type="button" class="ghost" data-del="${i.id}" aria-label="Supprimer ${esc(i.name)}">Supprimer</button></div></div>`).join("") + `</div>`;
     }
     const order = store ? storeOrder(S.store) : CATS.map(c => c.id);
     order.forEach(cid => {
@@ -656,6 +657,7 @@
   // ---------- Événements de la liste ----------
   $("list").addEventListener("click", e => {
     if (Date.now() - swipedAt < 350) return; // fin d'un glissement, pas un tap
+    const d = e.target.closest("[data-del]"); if (d) return deleteWithUndo(d.dataset.del);
     const a = e.target.closest("[data-act]"); if (!a) return;
     const id = a.closest(".item").dataset.id;
     if (a.dataset.act === "toggle") toggle(id); else openItem(id);
